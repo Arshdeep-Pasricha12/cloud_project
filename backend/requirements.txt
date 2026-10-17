@@ -1,0 +1,12 @@
+# AWS Serverless Document Intelligence Platform - Backend Dependencies
+# AWS Lambda runtime includes boto3, but specified here for local development and testing
+boto3>=1.34.0
+botocore>=1.34.0
+
+# Testing and Mocking
+pytest>=8.0.0
+pytest-mock>=3.12.0
+moto[s3,dynamodb,textract]>=5.0.0
+
+# Utilities
+python-dotenv>=1.0.0
