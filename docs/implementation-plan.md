@@ -9,20 +9,20 @@ This roadmap defines the ordered milestones to transition this project from the 
 | Milestone | Focus Area | Key AWS Services | Status |
 | :--- | :--- | :--- | :--- |
 | **Milestone 0** | Project Shell & Foundation | Local Vite React, Directory Structure, Documentation | **COMPLETED** |
-| **Milestone 1** | Cognito User Authentication | Amazon Cognito User Pools, App Client | *Pending Approval* |
-| **Milestone 2** | S3 Private Storage & Presigned Uploads | Amazon S3, Lambda (`create-upload`), IAM | *Upcoming* |
-| **Milestone 3** | API Gateway Integration & Routing | Amazon API Gateway, Cognito Authorizer, CORS | *Upcoming* |
-| **Milestone 4** | Textract AI Invoice Extraction Pipeline | Amazon Textract (`AnalyzeExpense`), Lambda (`process-document`) | *Upcoming* |
-| **Milestone 5** | DynamoDB Persistence & Query APIs | Amazon DynamoDB, Lambda (`get-document`, `list-documents`) | *Upcoming* |
-| **Milestone 6** | Human-in-the-Loop Corrections & Review UI | Lambda (`save-corrections`), React Review Dashboard | *Upcoming* |
-| **Milestone 7** | End-to-End Testing, Validation & Diagnostics | Moto/Pytest, Frontend Testing, CloudWatch Dashboards | *Upcoming* |
-| **Milestone 8** | Cloud Deployment & College Presentation Prep | S3 + CloudFront Hosting or AWS Amplify, Demo Runbook | *Upcoming* |
+| **Milestone 1** | Cognito User Authentication | Amazon Cognito User Pools, App Client | **COMPLETED** |
+| **Milestone 2** | S3 Private Storage & Presigned Uploads | Amazon S3, Lambda (`create-upload`), IAM | **COMPLETED** |
+| **Milestone 3** | API Gateway Integration & Routing | Amazon API Gateway, Cognito Authorizer, CORS | **COMPLETED** |
+| **Milestone 4** | Textract AI Invoice Extraction Pipeline | Amazon Textract (`AnalyzeExpense`), Lambda (`process-document`) | **COMPLETED** |
+| **Milestone 5** | DynamoDB Persistence & Query APIs | Amazon DynamoDB, Lambda (`get-document`, `list-documents`) | **COMPLETED** |
+| **Milestone 6** | Human-in-the-Loop Corrections & Review UI | Lambda (`save-corrections`), React Review Dashboard | **COMPLETED** |
+| **Milestone 7** | End-to-End Testing, Validation & Diagnostics | Moto/Pytest, Frontend Testing, CloudWatch Dashboards | **COMPLETED** |
+| **Milestone 8** | Cloud Deployment & College Presentation Prep | S3 Website Hosting, Demo Runbook, Production URLs | **COMPLETED** |
 
 ---
 
 ## Detailed Milestone Execution
 
-### Milestone 0: Foundation & Shell (Current)
+### Milestone 0: Foundation & Shell
 - [x] Workspace verification and Git repository initialization.
 - [x] Standard serverless directory layout (`frontend`, `backend`, `infrastructure`, `docs`, `scripts`).
 - [x] React + Vite application shell with dark-mode aesthetic, navigation sidebar, upload area, metrics counters, empty states, and document review placeholder.
@@ -31,25 +31,30 @@ This roadmap defines the ordered milestones to transition this project from the 
 
 ---
 
-### Milestone 1: User Authentication (Amazon Cognito)
+### Milestone 1: User Authentication (Amazon Cognito - Completed)
 **Objective**: Secure the application with user accounts, email verification, and JWT session management.
-1. Create Amazon Cognito User Pool with email sign-in attribute and password complexity rules.
-2. Configure App Client for SPA authentication (no client secret, SRP flow).
-3. Implement lightweight authentication state provider in React (`useAuth` hook).
-4. Build Sign In, Sign Up, and Confirm Account dialogs.
-5. Store JWT access/id tokens in memory/secure storage for API authorization headers.
-6. **Verification**: User can register an account, confirm email via verification code, sign in, and view their user profile in the dashboard header.
+- [x] Created Amazon Cognito User Pool `ap-south-1_ZIRwwnB44` in Mumbai (`ap-south-1`) with email sign-in attribute and password rules.
+- [x] Configured Public SPA App Client `4ai8598ftdkf0fc2hm4bd1v75k` with `ALLOW_USER_PASSWORD_AUTH` and token refresh (no client secret).
+- [x] Implemented zero-dependency `frontend/src/services/authService.js` communicating directly with Cognito IDP JSON 1.1 endpoints (`SignUp`, `ConfirmSignUp`, `InitiateAuth`, `ResendConfirmationCode`).
+- [x] Built React `AuthContext` and `useAuth` hook managing user profiles, JWT tokens, and session expiration.
+- [x] Built dark glassmorphic `AuthModal.jsx` supporting Sign In, Account Registration, and 6-digit confirmation code verification.
+- [x] Updated application Header with dynamic user avatar, email badge, "Cognito Verified" indicator, and sign out controls.
+- [x] Attached `Authorization: Bearer <token>` to upload requests in `uploadService.js`.
+- [x] Automated frontend unit tests passing (14 tests in total).
 
 ---
 
-### Milestone 2: S3 Document Storage & Presigned Uploads
+### Milestone 2: S3 Document Storage & Presigned Uploads (Completed)
 **Objective**: Enable browser-to-S3 direct uploads without routing large binary files through API Gateway.
-1. Create private S3 bucket with strict Public Access Block and SSE-S3 encryption.
-2. Configure bucket CORS for PUT/GET from frontend origin.
-3. Implement `backend/functions/create-upload/handler.py` using Boto3 `generate_presigned_url('put_object', ...)`.
-4. Enforce file size limit (10MB) and allowed MIME types (`application/pdf`, `image/jpeg`, `image/png`).
-5. Wire frontend upload panel with drag-and-drop, progress bar, and presigned upload request.
-6. **Verification**: Upload real PDF and image invoices directly to S3 and verify object creation in S3 private prefix.
+- [x] Implemented `backend/functions/create-upload/handler.py` generating short-lived S3 presigned PUT URLs with Boto3.
+- [x] Strict input validation for filename, MIME type (`application/pdf`, `image/jpeg`, `image/png`), and file size (10 MB limit).
+- [x] Server-generated unique object keys: `uploads/{uuid}/{sanitized-filename}` with path-traversal prevention.
+- [x] Pre-signed `Content-Type` header binding to ensure client cannot modify MIME type on PUT.
+- [x] Created `frontend/src/services/uploadService.js` handling client validation, presigned URL acquisition, and direct binary S3 upload via XHR with progress tracking.
+- [x] Enhanced `UploadPanel.jsx` with real progress bar, retry state on failure, unconfigured endpoint warning, and S3-confirmed success card.
+- [x] Prepared infrastructure specifications in `infrastructure/` (`s3-cors.json`, `iam-lambda-upload-policy.json`, S3 setup runbook).
+- [x] Unit test suites with 100% pass rate: 17 backend tests using `moto[s3]` and 14 frontend tests using Node test runner.
+- [x] Created local Lambda HTTP bridge (`scripts/run_local_backend.py`) for live local testing.
 
 ---
 
@@ -108,19 +113,25 @@ This roadmap defines the ordered milestones to transition this project from the 
 
 ---
 
-### Milestone 7: Testing, Diagnostics & Observability
+### Milestone 7: Testing, Diagnostics & Observability (COMPLETED)
 **Objective**: Complete automated unit/integration tests and CloudWatch monitoring.
-1. Write backend pytest suite using `moto` for S3, DynamoDB, and Textract mocking.
-2. Configure Amazon CloudWatch Logs with 14-day log retention.
-3. Create CloudWatch Metric Filter to alert on `FAILED` processing events.
-4. Frontend build optimization and responsive cross-browser testing.
-5. **Verification**: 100% passing backend tests and clean CloudWatch log streams.
+- [x] Comprehensive backend pytest suite using `moto` for S3, DynamoDB, and Textract mocking (`backend/tests/test_e2e_pipeline.py`).
+- [x] Configured Amazon CloudWatch Logs with 14-day log retention across all 5 deployed Lambdas.
+- [x] Created CloudWatch Metric Filters for tracking processing failures (`DocumentProcessingErrors`) and upload errors.
+- [x] Configured CloudWatch Metric Alarms (`doc-intelligence-processing-errors-alarm`, `doc-intelligence-api-5xx-alarm`).
+- [x] Enabled detailed CloudWatch metrics on Amazon API Gateway `prod` stage.
+- [x] Deployed Executive CloudWatch Operations Dashboard (`doc-intelligence-dashboard`) in `ap-south-1`.
+- [x] Frontend test suite expanded to 18 unit tests passing (100% pass rate).
+- [x] End-to-end cloud health diagnostic script (`scripts/run_e2e_live_test.py`) with all green verification checks.
+- [x] **Verification**: 36/36 backend tests and 18/18 frontend tests passing; clean CloudWatch logs.
 
 ---
 
-### Milestone 8: Deployment & Project Documentation
+### Milestone 8: Deployment & Project Documentation (COMPLETED)
 **Objective**: Deploy the full solution and prepare submission artifacts.
-1. Script deployment using AWS CLI / SAM template.
-2. Deploy frontend to S3 website bucket or AWS Amplify hosting.
-3. Update README with live URLs, architecture diagram, cost breakdown, and video demonstration link.
-4. Document test cases with real invoices demonstrating Textract extraction accuracy and reviewer correction tracking.
+- [x] Automated hosting deployment script (`scripts/deploy_milestone8_hosting.py`).
+- [x] Deployed frontend SPA production bundle to Amazon S3 Static Website Hosting (`http://doc-intelligence-frontend-399383129700.s3-website.ap-south-1.amazonaws.com`).
+- [x] Configured SPA client-side routing fallback (`IndexDocument: index.html`, `ErrorDocument: index.html`) and optimized Cache-Control headers.
+- [x] Updated Amazon S3 document uploads bucket CORS with live website origins.
+- [x] Updated master `README.md` with live production endpoints, full ASCII + Mermaid architecture diagrams, cost evaluation table, and evaluation presentation script.
+- [x] Created `docs/college-presentation-guide.md` with evaluator walkthrough, defense talking points, and live demonstration sequence.

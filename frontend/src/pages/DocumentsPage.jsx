@@ -23,7 +23,7 @@ export default function DocumentsPage() {
           <h2 className="page-title">Document Repository</h2>
           <p className="page-desc">Browse, search, and manage invoices stored across Amazon S3 & DynamoDB.</p>
         </div>
-        <span className="phase-badge">DynamoDB Query · Phase 5</span>
+        <span className="phase-badge badge-active">Cloud Encrypted Repository</span>
       </div>
 
       <div className="glass-card filter-toolbar">

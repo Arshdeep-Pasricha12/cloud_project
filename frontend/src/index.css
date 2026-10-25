@@ -264,8 +264,9 @@ h1, h2, h3, h4, h5, h6 {
   border-color: rgba(99, 102, 241, 0.3);
 }
 
-.phase-badge.ready {
-  background: rgba(16, 185, 129, 0.12);
+.phase-badge.ready,
+.phase-badge.badge-active {
+  background: rgba(16, 185, 129, 0.1);
   color: #34d399;
   border-color: rgba(16, 185, 129, 0.3);
 }

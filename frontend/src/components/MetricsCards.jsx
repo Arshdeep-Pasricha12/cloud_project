@@ -11,7 +11,7 @@ export default function MetricsCards({ metrics = { total: 0, processing: 0, pend
       subtitle: 'Invoices ingested to S3',
       icon: Files,
       colorClass: 'metric-total',
-      phase: 'DynamoDB · Phase 5'
+      tag: 'Live Lake'
     },
     {
       id: 'metric-card-processing',
@@ -20,7 +20,7 @@ export default function MetricsCards({ metrics = { total: 0, processing: 0, pend
       subtitle: 'Textract AnalyzeExpense active',
       icon: Loader2,
       colorClass: 'metric-processing',
-      phase: 'Textract · Phase 4'
+      tag: 'AI Pipeline'
     },
     {
       id: 'metric-card-pending',
@@ -29,7 +29,7 @@ export default function MetricsCards({ metrics = { total: 0, processing: 0, pend
       subtitle: 'Awaiting reviewer inspection',
       icon: AlertCircle,
       colorClass: 'metric-pending',
-      phase: 'Review Queue · Phase 6'
+      tag: 'Review Queue'
     },
     {
       id: 'metric-card-reviewed',
@@ -38,7 +38,7 @@ export default function MetricsCards({ metrics = { total: 0, processing: 0, pend
       subtitle: 'Verified with audit corrections',
       icon: CheckCircle2,
       colorClass: 'metric-reviewed',
-      phase: 'Persisted · Phase 6'
+      tag: 'Audit Sealed'
     }
   ];
 
@@ -60,7 +60,7 @@ export default function MetricsCards({ metrics = { total: 0, processing: 0, pend
             </div>
             <div className="metric-footer">
               <span className="metric-subtitle">{card.subtitle}</span>
-              <span className="phase-badge info">{card.phase}</span>
+              <span className="metric-tag">{card.tag}</span>
             </div>
           </div>
         );

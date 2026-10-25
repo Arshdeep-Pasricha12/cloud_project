@@ -1,80 +1,148 @@
-# AWS Infrastructure Architecture & Deployment Guide
+# AWS Infrastructure & S3 Configuration Guide (Milestone 2)
 
-This directory will contain the Infrastructure-as-Code (IaC) templates and configuration scripts for deploying the Serverless Document Intelligence Platform onto Amazon Web Services.
+This document provides instructions for configuring and provisioning the private Amazon S3 document storage bucket and IAM permissions for **Milestone 2: Real Document Uploads**.
 
-> **Status Notice**: In compliance with the project rules, **NO AWS resources have been created or deployed yet**. All resources described below are specifications for future implementation phases.
-
----
-
-## Target AWS Serverless Architecture
-
-```
-                                    +-----------------------------------------+
-                                    |         Amazon Cognito User Pool        |
-                                    |         (JWT Authentication)            |
-                                    +--------------------+--------------------+
-                                                         |
-                                            (JWT Bearer) |
-                                                         v
-[ React Dashboard (Vite) ]  ======>  [ Amazon API Gateway (REST API) ]
-            |                                      |
-            | (Direct Presigned PUT)               | Proxy
-            v                                      v
- [ Amazon S3 Private Bucket ] <====== [ AWS Lambda Functions (Python 3.12) ]
-                                                   |
-                             +---------------------+---------------------+
-                             |                     |                     |
-                             v                     v                     v
-                    [ Amazon Textract ]   [ Amazon DynamoDB ]   [ Amazon CloudWatch ]
-                   (AnalyzeExpense API)    (Documents Table)     (Centralized Logs)
-```
+> [!IMPORTANT]
+> **No AWS charges are incurred automatically.** Follow these manual setup steps only when you are ready to test against your real AWS account.
 
 ---
 
-## AWS Resource Specifications
+## 1. Security Architecture & Invariants
 
-### 1. Amazon S3 (Document Storage)
-- **Bucket Configuration**: Private bucket, `BlockPublicAcls: true`, `BlockPublicPolicy: true`, `IgnorePublicAcls: true`, `RestrictPublicBuckets: true`.
-- **Encryption**: Server-side encryption with AWS KMS or AES-256 (`aws:kms` or `AES256`).
-- **CORS Configuration**: Allow `PUT`, `GET`, `HEAD` methods from the frontend origin, exposing `ETag` header.
-- **Lifecycle Policy**: Optional transition of old documents to S3 Glacier Flexible Retrieval for cost optimization.
+| Security Control | Implementation |
+| :--- | :--- |
+| **S3 Public Access** | **All 4 Block Public Access settings enabled** (`BlockPublicAcls`, `IgnorePublicAcls`, `BlockPublicPolicy`, `RestrictPublicBuckets`). Anonymous reads/writes strictly rejected. |
+| **Object Ownership** | **BucketOwnerEnforced** (ACLs disabled). All objects uploaded are owned exclusively by the bucket owner account. |
+| **Encryption at Rest** | **Server-Side Encryption with Amazon S3 managed keys (`AES256`)** applied automatically to all objects. |
+| **IAM Scope** | Execution role is strictly constrained to `s3:PutObject` on the `uploads/*` key prefix. |
+| **Upload Keys** | Server-generated unique key path: `uploads/{random-uuid}/{sanitized-filename}` preventing collisions and path traversal. |
+| **Presigned Expiration** | **300 seconds (5 minutes)** short-lived window. Content-Type is cryptographically bound to the URL signature. |
 
-### 2. Amazon Cognito (Authentication)
-- **User Pool**: Self-service user registration with email verification.
-- **App Client**: Public client for React SPA (no client secret, SRP auth flow enabled).
-- **Token Verification**: API Gateway Cognito Authorizer validating JWT `id_token` or `access_token`.
+---
 
-### 3. Amazon DynamoDB (`Documents` Table)
-- **Billing Mode**: On-Demand (`PAY_PER_REQUEST`) for zero idle cost.
-- **Primary Key**:
-  - Partition Key: `documentId` (String, UUID v4)
-- **Global Secondary Index (GSI)**:
-  - Name: `UserIdIndex`
-  - Partition Key: `userId` (String)
-  - Sort Key: `createdAt` (String, ISO 8601)
-- **Attributes**:
-  - `documentId`, `userId`, `fileName`, `s3Key`, `contentType`, `fileSizeBytes`
-  - `status`: `UPLOADED` | `PROCESSING` | `PENDING_REVIEW` | `REVIEWED` | `FAILED`
-  - `rawExtraction`: Immutable snapshot of Textract AnalyzeExpense normalized output
-  - `correctedData`: User-edited invoice fields (never overwrites raw extraction)
-  - `createdAt`, `updatedAt`, `reviewedAt`
+## 2. Step-by-Step AWS Setup Instructions
 
-### 4. AWS Lambda Functions (Python 3.12 Serverless)
-- `create-upload`: Generates presigned S3 PUT URL for valid document mime types.
-- `process-document`: Triggers Amazon Textract AnalyzeExpense, parses output, writes initial DynamoDB record.
-- `get-document`: Fetches document extraction, corrections, and signed view URL.
-- `list-documents`: Queries documents by user via GSI with status filters and summary counts.
-- `save-corrections`: Validates and saves user corrections, updates document status to `REVIEWED`.
+### Step 1: Set Variables in PowerShell or Bash
+```powershell
+# Set your chosen bucket name and region
+$BUCKET_NAME="doc-intelligence-uploads-$(Get-Random)"
+$AWS_REGION="us-east-1"
+```
 
-### 5. Amazon API Gateway
-- REST API with CORS headers configured.
-- Cognito User Pool Authorizer on all protected routes:
-  - `POST /documents/upload-url`
-  - `POST /documents/{id}/process`
-  - `GET /documents`
-  - `GET /documents/{id}`
-  - `PUT /documents/{id}/corrections`
+### Step 2: Create the Private S3 Bucket
+```powershell
+# Create the bucket (add LocationConstraint if outside us-east-1)
+aws s3api create-bucket --bucket $BUCKET_NAME --region $AWS_REGION
 
-### 6. Amazon CloudWatch
-- Dedicated Log Group per Lambda function with 14-day retention to prevent unbounded storage costs.
-- Custom metric filters for extraction failures and latency diagnostics.
+# Enable strict Block Public Access
+aws s3api put-public-access-block `
+    --bucket $BUCKET_NAME `
+    --public-access-block-configuration "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
+
+# Enforce BucketOwnerEnforced ownership (disables ACLs)
+aws s3api put-bucket-ownership-controls `
+    --bucket $BUCKET_NAME `
+    --ownership-controls="Rules=[{ObjectOwnership=BucketOwnerEnforced}]"
+
+# Enforce default encryption at rest (SSE-S3 AES256)
+aws s3api put-bucket-encryption `
+    --bucket $BUCKET_NAME `
+    --server-side-encryption-configuration '{"Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]}'
+```
+
+### Step 3: Apply CORS Configuration
+The bucket must accept `PUT` requests directly from your local React development server (`http://localhost:5173`).
+
+Apply the provided configuration file ([s3-cors.json](file:///c:/Users/arshd/OneDrive%20-%20vit.ac.in/Desktop/cloud_project/infrastructure/s3-cors.json)):
+```powershell
+aws s3api put-bucket-cors `
+    --bucket $BUCKET_NAME `
+    --cors-configuration file://infrastructure/s3-cors.json
+```
+
+---
+
+## 3. IAM Execution Role for Lambda
+
+When deploying the Lambda function on AWS, create an execution role with the narrowly scoped policy:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowS3PresignedPutOnUploadsPrefix",
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject"
+      ],
+      "Resource": "arn:aws:s3:::YOUR_BUCKET_NAME/uploads/*"
+    },
+    {
+      "Sid": "AllowCloudWatchLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:*:*:log-group:/aws/lambda/create-upload:*"
+    }
+  ]
+}
+```
+
+---
+
+## 4. Local Testing with Real AWS S3
+
+You can test the full end-to-end upload flow locally using your real AWS S3 bucket:
+
+1. **Configure Environment Variables**:
+   ```powershell
+   $env:DOCUMENTS_BUCKET_NAME="your-actual-bucket-name"
+   $env:AWS_REGION="us-east-1"
+   ```
+
+2. **Start the Local Lambda Bridge**:
+   ```powershell
+   python scripts/run_local_backend.py
+   ```
+   This exposes `POST http://localhost:8000/documents/upload-url` executing your real `create-upload` handler.
+
+3. **Configure the Frontend**:
+   In `frontend/.env`:
+   ```bash
+   VITE_UPLOAD_API_URL=http://localhost:8000/documents/upload-url
+   ```
+
+4. **Upload a Real Invoice**:
+   Open `http://localhost:5173`, choose a sample PDF or PNG invoice, and click **Upload to S3**.
+
+5. **Verify the Object in S3**:
+   ```powershell
+   aws s3 ls s3://$BUCKET_NAME/uploads/ --recursive
+   ```
+
+---
+
+## 5. Security Limitations (Development Milestone Notice)
+
+> [!WARNING]
+> **Pre-Authentication Security Limitations**:
+> 1. **No User Authentication**: For Milestone 2, the endpoint assigns a placeholder identity (`dev-anonymous-user`). Anyone with network access to the endpoint can request a presigned PUT URL. Amazon Cognito User Pool authentication (Milestone 1/3) will restrict access in the next phase.
+> 2. **Client-Declared Metadata**: A presigned PUT URL validates that the client's `Content-Type` header matches what was signed. However, S3 PUT URLs cannot verify file magic bytes or enforce strict file-size limits on S3 at the exact time of transfer. In subsequent milestones, an S3 event-driven Lambda will inspect uploaded files, verify file headers, and reject any spoofed files.
+
+---
+
+## 6. Resource Cleanup & Deletion
+
+To prevent any ongoing storage charges after testing:
+
+```powershell
+# 1. Empty all objects in the bucket
+aws s3 rm s3://$BUCKET_NAME --recursive
+
+# 2. Delete the bucket
+aws s3api delete-bucket --bucket $BUCKET_NAME --region $AWS_REGION
+```

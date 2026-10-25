@@ -43,11 +43,16 @@ export const ALLOWED_FILE_TYPES = [
 export const MAX_FILE_SIZE_MB = 10;
 export const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
-export const IMPLEMENTATION_PHASES = {
-  AUTH: 'Amazon Cognito (Milestone 1)',
-  S3_UPLOAD: 'Amazon S3 Presigned URL (Milestone 2)',
-  API_GW: 'Amazon API Gateway (Milestone 3)',
-  TEXTRACT: 'Amazon Textract AnalyzeExpense (Milestone 4)',
-  DYNAMODB: 'Amazon DynamoDB Persistence (Milestone 5)',
-  CORRECTIONS: 'Human-in-the-Loop Corrections (Milestone 6)'
+export const SYSTEM_SERVICES = {
+  AUTH: 'Amazon Cognito User Pool',
+  S3_UPLOAD: 'Amazon S3 Encrypted Lake (AES-256)',
+  API_GW: 'Amazon API Gateway REST API',
+  TEXTRACT: 'Amazon Textract AnalyzeExpense AI',
+  DYNAMODB: 'Amazon DynamoDB Document Store',
+  CORRECTIONS: 'Audit & Human Verification Engine',
+  MONITORING: 'Amazon CloudWatch Observability'
 };
+
+// Backward-compatible alias
+export const IMPLEMENTATION_PHASES = SYSTEM_SERVICES;
+

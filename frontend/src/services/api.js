@@ -1,120 +1,131 @@
 /**
  * API Service Client for Serverless Document Intelligence Platform
- * Handles communication with Amazon API Gateway, Cognito, and direct S3 presigned URLs.
- * 
- * Note: Features will connect to real AWS endpoints once deployed in subsequent milestones.
+ * Handles communication with Amazon API Gateway, Cognito, DynamoDB, and direct S3 presigned URLs.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
-const AWS_REGION = import.meta.env.VITE_AWS_REGION || '';
+import { 
+  isUploadConfigured, 
+  requestPresignedUrl, 
+  uploadBinaryToS3, 
+  executeDocumentUpload 
+} from './uploadService.js';
+import { authService } from './authService.js';
+
+const getEnvVar = (key) => {
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
+    return import.meta.env[key];
+  }
+  if (typeof process !== 'undefined' && process.env && process.env[key]) {
+    return process.env[key];
+  }
+  return '';
+};
+
+const API_BASE_URL = getEnvVar('VITE_API_BASE_URL') || '';
+const AWS_REGION = getEnvVar('VITE_AWS_REGION') || '';
+
+const getAuthHeaders = () => {
+  const headers = { 'Content-Type': 'application/json' };
+  try {
+    const token = authService.getIdToken();
+    if (token) {
+      headers['Authorization'] = token;
+    }
+  } catch (e) {
+    // continue unauthenticated if token not available
+  }
+  return headers;
+};
 
 export const apiService = {
   isConfigured() {
     return Boolean(API_BASE_URL && !API_BASE_URL.includes('your-api-id'));
   },
 
+  isUploadConfigured() {
+    return isUploadConfigured();
+  },
+
   /**
    * Request a short-lived presigned PUT URL from Lambda create-upload
-   * Scheduled: Milestone 2 & 3
    */
-  async requestUploadUrl(fileName, contentType) {
-    if (!this.isConfigured()) {
-      throw new Error(
-        'AWS API Gateway is not yet connected. Presigned upload URLs will be available in Milestone 2 & 3.'
-      );
-    }
-    const response = await fetch(`${API_BASE_URL}/documents/upload-url`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fileName, contentType })
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to obtain upload URL: ${response.statusText}`);
-    }
-    return response.json();
+  async requestUploadUrl(fileName, contentType, fileSize = 1024) {
+    return requestPresignedUrl({ name: fileName, type: contentType, size: fileSize });
   },
 
   /**
    * Direct binary upload to Amazon S3 via presigned PUT URL
-   * Scheduled: Milestone 2
    */
   async uploadFileToS3(uploadUrl, file, onProgress) {
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open('PUT', uploadUrl, true);
-      xhr.setRequestHeader('Content-Type', file.type);
+    return uploadBinaryToS3(uploadUrl, file, onProgress);
+  },
 
-      if (onProgress && xhr.upload) {
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) {
-            const percent = Math.round((e.loaded / e.total) * 100);
-            onProgress(percent);
-          }
-        };
-      }
-
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          resolve(true);
-        } else {
-          reject(new Error(`S3 upload failed with status ${xhr.status}`));
-        }
-      };
-
-      xhr.onerror = () => reject(new Error('Network error during S3 upload'));
-      xhr.send(file);
-    });
+  /**
+   * Complete document upload flow
+   */
+  async executeUpload(file, options) {
+    return executeDocumentUpload(file, options);
   },
 
   /**
    * Fetch documents list from DynamoDB via list-documents Lambda
-   * Scheduled: Milestone 5
+   * Milestone 5: Real AWS DynamoDB Query
    */
   async listDocuments() {
     if (!this.isConfigured()) {
-      // In initial phase: return genuine empty data state with 0 records
       return {
         items: [],
-        metrics: {
-          total: 0,
-          processing: 0,
-          pendingReview: 0,
-          reviewed: 0
-        }
+        metrics: { total: 0, processing: 0, pendingReview: 0, reviewed: 0 }
       };
     }
-    const response = await fetch(`${API_BASE_URL}/documents`);
-    if (!response.ok) throw new Error('Failed to fetch documents');
+    const response = await fetch(`${API_BASE_URL}/documents`, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to fetch documents (HTTP ${response.status})`);
+    }
     return response.json();
   },
 
   /**
    * Fetch single document detail from DynamoDB
-   * Scheduled: Milestone 5
+   * Milestone 5: Real AWS DynamoDB Item Retrieval
    */
   async getDocument(documentId) {
     if (!this.isConfigured()) {
       return null;
     }
-    const response = await fetch(`${API_BASE_URL}/documents/${documentId}`);
-    if (!response.ok) throw new Error('Failed to fetch document');
+    const response = await fetch(`${API_BASE_URL}/documents/${documentId}`, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to fetch document (HTTP ${response.status})`);
+    }
     return response.json();
   },
 
   /**
-   * Save human-in-the-loop corrections to DynamoDB
-   * Scheduled: Milestone 6
+   * Save human-in-the-loop corrections to DynamoDB audit store
    */
   async saveCorrections(documentId, corrections) {
     if (!this.isConfigured()) {
-      throw new Error('DynamoDB mutation service scheduled for Milestone 6.');
+      throw new Error('API Gateway base URL is not configured.');
     }
     const response = await fetch(`${API_BASE_URL}/documents/${documentId}/corrections`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ corrections })
     });
-    if (!response.ok) throw new Error('Failed to save corrections');
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || 'Failed to save corrections');
+    }
     return response.json();
   }
 };
+
+export { isUploadConfigured, requestPresignedUrl, uploadBinaryToS3, executeDocumentUpload };

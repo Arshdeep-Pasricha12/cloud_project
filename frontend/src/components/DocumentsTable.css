@@ -74,26 +74,29 @@
   margin-bottom: 1.5rem;
 }
 
-.empty-milestone-guidance {
-  background: rgba(99, 102, 241, 0.08);
-  border: 1px solid rgba(99, 102, 241, 0.2);
-  border-radius: var(--radius-md);
-  padding: 0.75rem 1.25rem;
-  max-width: 550px;
-}
-
-.guidance-step {
+.empty-feature-pills {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  font-size: 0.8rem;
-  color: #c7d2fe;
-  text-align: left;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
-.step-icon {
+.feature-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle);
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-full);
+}
+
+.feature-pill svg {
   color: #818cf8;
-  flex-shrink: 0;
 }
 
 /* Data Table Styling */

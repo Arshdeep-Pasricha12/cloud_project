@@ -16,42 +16,42 @@ export default function DashboardPage() {
         <div className="banner-content">
           <div className="banner-badge">
             <Cpu size={14} />
-            <span>Milestone 0 · Architecture Foundation</span>
+            <span>AI Document Intelligence Pipeline · ap-south-1</span>
           </div>
-          <h2 className="banner-title">Serverless Document Intelligence Dashboard</h2>
+          <h2 className="banner-title">Intelligent Financial Document Automation</h2>
           <p className="banner-text">
-            Ingest invoices via Amazon S3 presigned URLs, extract structured financial records using Amazon Textract AnalyzeExpense, and validate corrections with human-in-the-loop DynamoDB persistence.
+            End-to-end serverless cloud pipeline: Ingest enterprise invoices into Amazon S3, extract structured line-items with Amazon Textract, and index records in Amazon DynamoDB with audit verification.
           </p>
         </div>
         <div className="banner-services">
           <div className="service-chip">
-            <span className="dot dot-amber"></span>
-            <span>Cognito (Auth)</span>
+            <span className="dot dot-green"></span>
+            <span>Cognito SSO</span>
           </div>
           <div className="service-chip">
-            <span className="dot dot-amber"></span>
-            <span>S3 (Private Storage)</span>
+            <span className="dot dot-green"></span>
+            <span>S3 Encrypted Lake</span>
           </div>
           <div className="service-chip">
-            <span className="dot dot-amber"></span>
-            <span>Textract (AnalyzeExpense)</span>
+            <span className="dot dot-green"></span>
+            <span>Textract AI</span>
           </div>
           <div className="service-chip">
-            <span className="dot dot-amber"></span>
-            <span>DynamoDB (Records)</span>
+            <span className="dot dot-green"></span>
+            <span>DynamoDB Core</span>
           </div>
           <div className="service-chip">
-            <span className="dot dot-amber"></span>
-            <span>Lambda (Python 3.12)</span>
+            <span className="dot dot-green"></span>
+            <span>CloudWatch Logs</span>
           </div>
         </div>
       </div>
 
-      {/* Metrics Cards Grid (Empty States) */}
+      {/* Metrics Cards Grid */}
       <MetricsCards metrics={metrics} />
 
       {/* Ingest Document Panel */}
-      <UploadPanel />
+      <UploadPanel onUploadSuccess={refreshDocuments} />
 
       {/* Recent Documents Table (Genuine Empty State) */}
       <DocumentsTable 

@@ -2,6 +2,8 @@ import React from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
+import AuthModal from './components/AuthModal';
+import { AuthProvider } from './context/AuthContext';
 import DashboardPage from './pages/DashboardPage';
 import DocumentsPage from './pages/DocumentsPage';
 import DocumentReviewPage from './pages/DocumentReviewPage';
@@ -14,7 +16,7 @@ function AppContent() {
     if (pathname === '/') return 'Dashboard';
     if (pathname.startsWith('/documents')) return 'Documents';
     if (pathname.startsWith('/review')) return 'Document Review';
-    if (pathname.startsWith('/settings')) return 'AWS Configuration';
+    if (pathname.startsWith('/settings')) return 'Platform Settings';
     return 'Document Intelligence';
   };
 
@@ -34,10 +36,15 @@ function AppContent() {
           </Routes>
         </main>
       </div>
+      <AuthModal />
     </div>
   );
 }
 
 export default function App() {
-  return <AppContent />;
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
 }

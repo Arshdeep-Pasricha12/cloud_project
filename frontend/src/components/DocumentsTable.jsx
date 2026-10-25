@@ -22,7 +22,7 @@ export default function DocumentsTable({ documents = [], isLoading = false, onRe
           <p className="table-subtitle">Live records from Amazon DynamoDB table</p>
         </div>
         <div className="table-header-actions">
-          <span className="phase-badge">DynamoDB GSI · Phase 5</span>
+          <span className="phase-badge">Live DynamoDB Index</span>
           <button
             type="button"
             id="btn-refresh-documents"
@@ -42,18 +42,13 @@ export default function DocumentsTable({ documents = [], isLoading = false, onRe
           <div className="empty-state-icon-box">
             <Inbox size={42} className="empty-icon" />
           </div>
-          <h3 className="empty-title">No Documents in Database</h3>
+          <h3 className="empty-title">No Documents in Repository</h3>
           <p className="empty-desc">
-            No invoices have been ingested into Amazon S3 or recorded in DynamoDB yet.
-            As required, this application starts with genuine empty states rather than fake mock records.
+            No invoices or receipts have been uploaded yet. Ingest a document above to trigger automated Amazon Textract OCR extraction and line-item indexing.
           </p>
-          <div className="empty-milestone-guidance">
-            <div className="guidance-step">
-              <Database size={15} className="step-icon" />
-              <span>
-                <strong>Milestones 2 & 5:</strong> Uploading will write document metadata to DynamoDB and trigger Textract AnalyzeExpense.
-              </span>
-            </div>
+          <div className="empty-feature-pills">
+            <span className="feature-pill"><ShieldCheck size={13} /> S3 Encrypted (SSE-AES256)</span>
+            <span className="feature-pill"><Database size={13} /> Realtime DynamoDB GSI</span>
           </div>
         </div>
       ) : (
