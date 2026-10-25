@@ -877,3 +877,253 @@
   margin-bottom: 22px;
 }
 
+/* ==========================================================================
+   Review Queue Specific Styles
+   ========================================================================== */
+
+.review-queue-page {
+  display: flex;
+  flex-direction: column;
+}
+
+.review-queue-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 640px) {
+  .review-queue-header-row {
+    flex-direction: column;
+  }
+}
+
+.queue-status-pills {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.queue-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.pill-pending {
+  background-color: #E8F2EA;
+  color: #1A3826;
+  border: 1px solid #C8DEC9;
+}
+
+.pill-reviewed {
+  background-color: #F0F3EF;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+}
+
+/* Next in Queue Hero Banner */
+.next-review-hero-card {
+  background: linear-gradient(135deg, #F4F7F4 0%, #FFFFFF 100%);
+  border: 1px solid #CFDBCD;
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  box-shadow: var(--shadow-subtle);
+}
+
+@media (max-width: 768px) {
+  .next-review-hero-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.hero-left-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hero-badge-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--action-primary);
+  text-transform: uppercase;
+}
+
+.hero-doc-name {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.hero-extracted-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.hero-sum-item strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.hero-sum-divider {
+  color: #CBD5CD;
+}
+
+.btn-hero-review {
+  white-space: nowrap;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Review Queue Table Card */
+.review-queue-table-card {
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-subtle);
+  overflow: hidden;
+}
+
+.queue-table-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border-subtle);
+  background-color: #FAFCFA;
+}
+
+.queue-table-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin: 0;
+}
+
+/* Confidence Pills */
+.confidence-pill {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.pill-high-conf {
+  background-color: #EBF5EF;
+  color: #1A3826;
+  border: 1px solid #C8DEC9;
+}
+
+.pill-low-conf {
+  background-color: #FDF4E6;
+  color: #8C5311;
+  border: 1px solid #F5D3A6;
+}
+
+/* All Caught Up Card */
+.queue-all-caught-up-card {
+  max-width: 520px;
+  margin: 50px auto;
+  padding: 40px 32px;
+  text-align: center;
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-subtle);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.caught-up-icon-box {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-color: #EBF5EF;
+  color: var(--action-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  border: 1px solid #C8DEC9;
+}
+
+.caught-up-title {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+}
+
+.caught-up-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+.caught-up-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* Workstation additions */
+.meta-vendor-tag {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.banner-msg-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-banner-next {
+  margin-left: auto;
+  gap: 6px;
+  text-decoration: none;
+}
+
+.no-line-items-hint {
+  padding: 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+  background-color: #FAFCFA;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--border-subtle);
+}
+
+

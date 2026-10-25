@@ -113,11 +113,27 @@ def lambda_handler(event: Dict[str, Any], context: Any = None) -> Dict[str, Any]
         elif status == DocumentStatus.FAILED.value:
             metrics["failed"] += 1
 
-        # Extract summary vendor/amount if available from rawExtraction
+        # Extract summary vendor, invoice number, date, amount, currency if available
         raw_ext = item.get("rawExtraction") or {}
         summary_fields = raw_ext.get("summaryFields") or {}
-        vendor = summary_fields.get("vendorName", {}).get("value") or item.get("vendor") or "Processing..."
+        vendor = (
+            summary_fields.get("vendorName", {}).get("value")
+            or item.get("vendor")
+            or ("Processing..." if status in (DocumentStatus.PROCESSING.value, DocumentStatus.UPLOADED.value) else "—")
+        )
         total_amount = summary_fields.get("totalAmount", {}).get("value") or item.get("totalAmount")
+        invoice_number = (
+            summary_fields.get("invoiceNumber", {}).get("value")
+            or item.get("invoiceNumber")
+            or "—"
+        )
+        invoice_date = summary_fields.get("invoiceDate", {}).get("value") or item.get("invoiceDate")
+        due_date = summary_fields.get("dueDate", {}).get("value") or item.get("dueDate")
+        currency = summary_fields.get("currency", {}).get("value") or item.get("currency") or "USD"
+        confidence = (
+            raw_ext.get("metrics", {}).get("averageConfidence")
+            or item.get("confidence")
+        )
 
         formatted_items.append({
             "documentId": item.get("documentId"),
@@ -129,8 +145,13 @@ def lambda_handler(event: Dict[str, Any], context: Any = None) -> Dict[str, Any]
             "updatedAt": item.get("updatedAt"),
             "vendor": vendor,
             "totalAmount": total_amount,
-            "confidence": raw_ext.get("metrics", {}).get("averageConfidence"),
-            "s3Key": item.get("s3Key")
+            "invoiceNumber": invoice_number,
+            "invoiceDate": invoice_date,
+            "dueDate": due_date,
+            "currency": currency,
+            "confidence": confidence,
+            "s3Key": item.get("s3Key"),
+            "rawExtraction": raw_ext
         })
 
     return build_response(200, {

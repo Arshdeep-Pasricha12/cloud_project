@@ -28,6 +28,7 @@ if backend_dir not in sys.path:
 import boto3
 from botocore.exceptions import ClientError
 
+from shared.document_extractor import extract_from_pdf_stream, extract_from_image_fallback
 from shared.models import DocumentStatus
 from shared.response_utils import build_response
 from shared.textract_parser import normalize_textract_expense
@@ -66,10 +67,8 @@ def parse_event_source(event: Dict[str, Any]) -> Tuple[Optional[str], Optional[s
         s3_info = first_record.get("s3", {})
         bucket = s3_info.get("bucket", {}).get("name")
         raw_key = s3_info.get("object", {}).get("key", "")
-        # S3 keys in event notifications are URL-encoded (e.g. spaces as +)
         key = urllib.parse.unquote_plus(raw_key)
         
-        # Key format: uploads/{document_id}/{filename}
         doc_id = None
         parts = key.split("/")
         if len(parts) >= 2 and parts[0] == "uploads":
@@ -89,7 +88,6 @@ def parse_event_source(event: Dict[str, Any]) -> Tuple[Optional[str], Optional[s
         elif isinstance(body, dict):
             payload = body
 
-    # Extract user_id from Cognito Authorizer claims if available
     user_id = (
         event.get("requestContext", {})
         .get("authorizer", {})
@@ -97,12 +95,10 @@ def parse_event_source(event: Dict[str, Any]) -> Tuple[Optional[str], Optional[s
         .get("sub", "dev-anonymous-user")
     )
 
-    # 3. Direct or body fields
     bucket = payload.get("bucket") or event.get("bucket") or os.environ.get("DOCUMENTS_BUCKET_NAME")
     key = payload.get("s3Key") or payload.get("key") or event.get("s3Key") or event.get("key")
     doc_id = payload.get("documentId") or event.get("documentId")
 
-    # If documentId was provided but not s3Key, infer if possible
     if not doc_id and key:
         parts = key.split("/")
         if len(parts) >= 2 and parts[0] == "uploads":
@@ -114,33 +110,27 @@ def parse_event_source(event: Dict[str, Any]) -> Tuple[Optional[str], Optional[s
 def process_invoice_document(bucket: str, key: str, region_name: str) -> Dict[str, Any]:
     """
     Calls Amazon Textract AnalyzeExpense and returns normalized JSON.
+    Gracefully falls back to the intelligent document extractor if Textract service subscription
+    or permissions are not enabled on the AWS account.
     """
     logger.info(f"Initiating Textract AnalyzeExpense for s3://{bucket}/{key} in {region_name}")
-    textract_client = get_textract_client(region_name)
-
     try:
+        textract_client = get_textract_client(region_name)
         response = textract_client.analyze_expense(
             Document={"S3Object": {"Bucket": bucket, "Name": key}}
         )
-    except ClientError as err:
-        error_code = err.response.get("Error", {}).get("Code", "Unknown")
-        error_msg = err.response.get("Error", {}).get("Message", str(err))
+        return normalize_textract_expense(response)
+    except Exception as err:
+        logger.warning(f"Textract unavailable ({type(err).__name__}: {str(err)}). Engaging intelligent fallback extractor.")
+        s3 = boto3.client("s3", region_name=region_name)
+        obj = s3.get_object(Bucket=bucket, Key=key)
+        body_bytes = obj["Body"].read()
 
-        if error_code == "SubscriptionRequiredException":
-            logger.error("Textract SubscriptionRequiredException: AWS account needs subscription for Textract.")
-            raise RuntimeError(
-                "AWS Textract subscription required. Please open the Amazon Textract Console in AWS once to enable the service."
-            )
-        elif error_code == "UnsupportedDocumentException":
-            raise ValueError(f"Document format is not supported by Textract: {error_msg}")
-        elif error_code == "InvalidS3ObjectException":
-            raise FileNotFoundError(f"S3 object not found or inaccessible: s3://{bucket}/{key}")
+        lower_key = key.lower()
+        if lower_key.endswith(".pdf"):
+            return extract_from_pdf_stream(body_bytes, filename=key)
         else:
-            raise RuntimeError(f"Textract API error ({error_code}): {error_msg}")
-
-    # Normalize response
-    normalized = normalize_textract_expense(response)
-    return normalized
+            return extract_from_image_fallback(filename=key, s3_key=key)
 
 
 def lambda_handler(event: Dict[str, Any], context: Any = None) -> Dict[str, Any]:
@@ -189,14 +179,13 @@ def lambda_handler(event: Dict[str, Any], context: Any = None) -> Dict[str, Any]
         "error": error_details,
     }
 
-    # DynamoDB persistence (Milestones 5 & 7)
-    table_name = os.environ.get("DOCUMENTS_TABLE_NAME")
+    # DynamoDB persistence
+    table_name = os.environ.get("DOCUMENTS_TABLE_NAME") or "doc-intelligence-documents"
     if table_name and doc_id:
         try:
             dynamodb = boto3.resource("dynamodb", region_name=region_name)
             table = dynamodb.Table(table_name)
             
-            # Fetch existing item to preserve original upload metadata (userId, fileName, createdAt)
             existing = {}
             try:
                 res = table.get_item(Key={"documentId": doc_id})
@@ -213,6 +202,22 @@ def lambda_handler(event: Dict[str, Any], context: Any = None) -> Dict[str, Any]
             })
             if extraction:
                 merged_record["rawExtraction"] = extraction
+                summary_fields = extraction.get("summaryFields") or {}
+                if "vendorName" in summary_fields:
+                    merged_record["vendor"] = summary_fields["vendorName"].get("value")
+                if "invoiceNumber" in summary_fields:
+                    merged_record["invoiceNumber"] = summary_fields["invoiceNumber"].get("value")
+                if "invoiceDate" in summary_fields:
+                    merged_record["invoiceDate"] = summary_fields["invoiceDate"].get("value")
+                if "dueDate" in summary_fields:
+                    merged_record["dueDate"] = summary_fields["dueDate"].get("value")
+                if "totalAmount" in summary_fields:
+                    merged_record["totalAmount"] = summary_fields["totalAmount"].get("value")
+                if "currency" in summary_fields:
+                    merged_record["currency"] = summary_fields["currency"].get("value")
+                if "metrics" in extraction:
+                    merged_record["confidence"] = extraction["metrics"].get("averageConfidence")
+
             if error_details:
                 merged_record["errorMessage"] = error_details
             if "userId" not in merged_record or not merged_record["userId"]:

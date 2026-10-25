@@ -49,8 +49,30 @@ function AppContent() {
                 />
               } 
             />
-            <Route path="/review" element={<DocumentReviewPage />} />
-            <Route path="/review/:id" element={<DocumentReviewPage />} />
+            <Route 
+              path="/review" 
+              element={
+                <DocumentReviewPage 
+                  documents={documents}
+                  metrics={metrics}
+                  isLoading={isLoading}
+                  refreshDocuments={refreshDocuments}
+                  onOpenUpload={handleOpenUpload}
+                />
+              } 
+            />
+            <Route 
+              path="/review/:id" 
+              element={
+                <DocumentReviewPage 
+                  documents={documents}
+                  metrics={metrics}
+                  isLoading={isLoading}
+                  refreshDocuments={refreshDocuments}
+                  onOpenUpload={handleOpenUpload}
+                />
+              } 
+            />
             <Route path="/settings" element={<SettingsPage />} />
             <Route 
               path="*" 
