@@ -9,11 +9,7 @@ import {
   Server, 
   Activity, 
   ExternalLink, 
-  Lock, 
-  Sliders, 
-  FileText,
-  Zap,
-  Radio
+  Sliders
 } from 'lucide-react';
 import './SettingsPage.css';
 
@@ -33,120 +29,116 @@ export default function SettingsPage() {
       name: 'Amazon Cognito User Pool',
       role: 'Authentication & Tenant Identity',
       icon: Key,
-      status: 'Operational',
+      status: 'Connected',
       resource: config.cognitoPoolId,
       detail: 'OAuth 2.0 / JWT SRP Auth',
-      metric: 'Zero-Trust Tokens'
+      metric: 'Active'
     },
     {
       id: 's3',
       name: 'Amazon S3 Document Lake',
       role: 'Secure Encrypted Ingestion Storage',
       icon: Cloud,
-      status: 'Operational',
+      status: 'Connected',
       resource: config.s3Bucket,
       detail: 'SSE-S3 AES-256 At-Rest',
-      metric: 'Public Access Blocked'
+      metric: 'Private Bucket'
     },
     {
       id: 'api-gw',
       name: 'Amazon API Gateway REST',
       role: 'API Ingestion & CORS Proxy',
       icon: Server,
-      status: 'Operational',
+      status: 'Connected',
       resource: 'wxgm03t7wc / prod',
       detail: 'Cognito JWT Authorizer',
-      metric: '< 120ms P95 Latency'
+      metric: 'Low Latency'
     },
     {
       id: 'textract',
       name: 'Amazon Textract AnalyzeExpense',
       role: 'AI Line-Item OCR Engine',
       icon: Cpu,
-      status: 'Operational',
+      status: 'Connected',
       resource: 'AWS Textract Financial AI',
       detail: 'Multipage Invoice Parser',
-      metric: 'Deep Learning Model'
+      metric: 'Deep Learning'
     },
     {
       id: 'dynamodb',
       name: 'Amazon DynamoDB Core Store',
       role: 'Document Metadata & Audit Index',
       icon: Database,
-      status: 'Operational',
+      status: 'Connected',
       resource: 'doc-intelligence-documents',
       detail: 'UserDocumentsIndex GSI',
-      metric: 'Single-digit ms Read/Write'
+      metric: 'On-Demand'
     },
     {
       id: 'cloudwatch',
       name: 'Amazon CloudWatch Observability',
       role: 'Structured Logging & Telemetry',
       icon: Activity,
-      status: 'Operational',
+      status: 'Connected',
       resource: 'doc-intelligence-dashboard',
       detail: '14-Day Log Group Retention',
-      metric: 'Real-time Metrics'
+      metric: 'Audit Ready'
     }
   ];
 
   return (
     <div className="settings-page" id="settings-page">
-      {/* Top Header */}
-      <div className="settings-header">
+      {/* Header */}
+      <div className="settings-header-row">
         <div>
-          <h2 className="settings-title">Platform Settings & Cloud Infrastructure</h2>
-          <p className="settings-desc">
-            Active AWS microservice topology, security governance, AI extraction policies, and real-time operations.
+          <h1 className="page-title">Settings</h1>
+          <p className="page-subtitle">
+            Cloud infrastructure, extraction thresholds, and compliance controls.
           </p>
         </div>
-        <div className="cloud-health-indicator">
-          <span className="live-pulse-dot"></span>
-          <span className="live-health-text">All Cloud Systems Normal</span>
+        <div className="status-pill reviewed">
+          <span>Production active</span>
         </div>
       </div>
 
-      {/* Cloud Microservices Topology Grid */}
-      <div className="section-block">
-        <div className="section-header-row">
-          <div className="section-title-wrap">
-            <Radio size={16} className="section-icon text-indigo" />
-            <h3 className="section-heading">Connected AWS Microservices</h3>
-          </div>
-          <span className="region-pill">Region: ap-south-1 (Mumbai)</span>
+      {/* Cloud Services Grid */}
+      <div className="settings-section">
+        <div className="section-title-bar">
+          <h2 className="section-title">Cloud Infrastructure</h2>
+          <span className="region-indicator">Region: ap-south-1 (Mumbai)</span>
         </div>
 
-        <div className="services-grid">
+        <div className="services-card-grid">
           {cloudServices.map((srv) => {
             const Icon = srv.icon;
             return (
-              <div key={srv.id} className="glass-card service-infra-card" id={`service-card-${srv.id}`}>
+              <div key={srv.id} className="service-infra-card" id={`service-card-${srv.id}`}>
                 <div className="service-card-top">
-                  <div className="service-icon-box">
-                    <Icon size={18} className="service-icon" />
+                  <div className="service-icon-wrap">
+                    <Icon size={16} />
                   </div>
-                  <div className="service-status-pill">
-                    <CheckCircle2 size={12} className="status-check-icon" />
+                  <span className="service-status-tag reviewed">
+                    <CheckCircle2 size={11} />
                     <span>{srv.status}</span>
-                  </div>
+                  </span>
                 </div>
 
-                <h4 className="service-name">{srv.name}</h4>
+                <h3 className="service-name">{srv.name}</h3>
                 <p className="service-role">{srv.role}</p>
 
-                <div className="service-details-box">
-                  <div className="service-detail-item">
-                    <span className="detail-label">Resource</span>
-                    <span className="detail-value font-mono" title={srv.resource}>{srv.resource}</span>
+                <div className="service-meta-box">
+                  <div className="service-meta-item">
+                    <span className="meta-lbl">Resource</span>
+                    <span className="meta-val font-mono" title={srv.resource}>{srv.resource}</span>
                   </div>
-                  <div className="service-detail-item">
-                    <span className="detail-label">Protocol</span>
-                    <span className="detail-value">{srv.detail}</span>
+                  <div className="service-meta-item">
+                    <span className="meta-lbl">Protocol</span>
+                    <span className="meta-val">{srv.detail}</span>
                   </div>
                 </div>
 
-                <div className="service-card-footer">
-                  <span className="service-metric-tag">{srv.metric}</span>
+                <div className="service-footer-pill">
+                  <span>{srv.metric}</span>
                 </div>
               </div>
             );
@@ -154,124 +146,122 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Two Column Configuration & Security Parameters */}
+      {/* Two-Column Policies & Rules */}
       <div className="settings-split-grid">
-        {/* AI & Pipeline Processing Parameters */}
-        <div className="glass-card config-panel">
-          <div className="panel-header">
-            <Sliders size={18} className="panel-icon text-sky" />
+        {/* Extraction Policies */}
+        <div className="settings-card">
+          <div className="card-header-bar">
+            <Sliders size={16} className="card-header-icon" />
             <div>
-              <h3 className="panel-title">AI Extraction & Processing Policies</h3>
-              <p className="panel-desc">Operational thresholds for automated invoice ingestion</p>
+              <h3 className="panel-title">Extraction & Processing Policies</h3>
+              <p className="panel-desc">Thresholds for automated invoice ingestion</p>
             </div>
           </div>
 
-          <div className="policy-items-list">
-            <div className="policy-item">
-              <div className="policy-meta">
-                <span className="policy-name">OCR Confidence Verification Threshold</span>
-                <span className="policy-sub">Fields below this confidence score trigger human review flags</span>
+          <div className="policies-list">
+            <div className="policy-row">
+              <div className="policy-info">
+                <span className="policy-title">OCR Confidence Threshold</span>
+                <span className="policy-desc">Fields below this score trigger human review flags</span>
               </div>
-              <div className="policy-control-badge">80.0% Minimum</div>
+              <span className="policy-badge tabular-nums">80.0% Minimum</span>
             </div>
 
-            <div className="policy-item">
-              <div className="policy-meta">
-                <span className="policy-name">Maximum Ingestion Payload</span>
-                <span className="policy-sub">Enforced at S3 presigned URL signature generation</span>
+            <div className="policy-row">
+              <div className="policy-info">
+                <span className="policy-title">Maximum File Payload</span>
+                <span className="policy-desc">Enforced at S3 presigned URL generation</span>
               </div>
-              <div className="policy-control-badge">10.0 MB</div>
+              <span className="policy-badge tabular-nums">10.0 MB</span>
             </div>
 
-            <div className="policy-item">
-              <div className="policy-meta">
-                <span className="policy-name">Allowed MIME Formats</span>
-                <span className="policy-sub">Validated on client upload and Lambda ingestion</span>
+            <div className="policy-row">
+              <div className="policy-info">
+                <span className="policy-title">Supported Formats</span>
+                <span className="policy-desc">Validated on client upload and Lambda handler</span>
               </div>
-              <div className="format-tags">
-                <span className="format-tag">PDF</span>
-                <span className="format-tag">PNG</span>
-                <span className="format-tag">JPEG</span>
+              <div className="formats-pill-row">
+                <span className="format-pill">PDF</span>
+                <span className="format-pill">PNG</span>
+                <span className="format-pill">JPEG</span>
               </div>
             </div>
 
-            <div className="policy-item">
-              <div className="policy-meta">
-                <span className="policy-name">Extraction Immutability</span>
-                <span className="policy-sub">Raw Textract outputs are permanently preserved alongside corrections</span>
+            <div className="policy-row">
+              <div className="policy-info">
+                <span className="policy-title">Extraction Immutability</span>
+                <span className="policy-desc">Raw OCR outputs are preserved alongside human edits</span>
               </div>
-              <div className="policy-control-badge success">Enforced</div>
+              <span className="policy-badge success">Enforced</span>
             </div>
           </div>
         </div>
 
-        {/* Security & Cloud Governance Rules */}
-        <div className="glass-card config-panel">
-          <div className="panel-header">
-            <ShieldCheck size={18} className="panel-icon text-emerald" />
+        {/* Security & Governance */}
+        <div className="settings-card">
+          <div className="card-header-bar">
+            <ShieldCheck size={16} className="card-header-icon" />
             <div>
               <h3 className="panel-title">Security & Compliance Governance</h3>
-              <p className="panel-desc">Enterprise data protection and zero-trust controls</p>
+              <p className="panel-desc">Data protection and zero-trust controls</p>
             </div>
           </div>
 
-          <ul className="governance-rules-list">
-            <li className="governance-rule">
-              <div className="rule-bullet"></div>
-              <div className="rule-content">
+          <ul className="governance-list">
+            <li className="gov-item">
+              <span className="gov-bullet">•</span>
+              <div>
                 <strong>Zero Long-Lived Credentials:</strong> Client applications never handle AWS IAM credentials. All storage access uses ephemeral 900-second S3 presigned PUT URLs.
               </div>
             </li>
-            <li className="governance-rule">
-              <div className="rule-bullet"></div>
-              <div className="rule-content">
-                <strong>Multi-Tenant Cryptographic Isolation:</strong> Documents are queried strictly by authenticated user UUID from validated Cognito JWT authorizer claims.
+            <li className="gov-item">
+              <span className="gov-bullet">•</span>
+              <div>
+                <strong>Tenant Cryptographic Isolation:</strong> Documents are queried strictly by authenticated user UUID from validated Cognito JWT authorizer claims.
               </div>
             </li>
-            <li className="governance-rule">
-              <div className="rule-bullet"></div>
-              <div className="rule-content">
-                <strong>At-Rest & In-Transit Encryption:</strong> All S3 document objects are encrypted using AES-256 (SSE-S3); all communications use TLS 1.3.
+            <li className="gov-item">
+              <span className="gov-bullet">•</span>
+              <div>
+                <strong>At-Rest & In-Transit Encryption:</strong> All S3 document objects are encrypted using AES-256 (SSE-S3); all network communication uses TLS 1.3.
               </div>
             </li>
-            <li className="governance-rule">
-              <div className="rule-bullet"></div>
-              <div className="rule-content">
-                <strong>Automated Audit Trails:</strong> Every document review modification is version-stamped with reviewer identity, timestamp, and field diffs.
-              </div>
-            </li>
-            <li className="governance-rule">
-              <div className="rule-bullet"></div>
-              <div className="rule-content">
-                <strong>Zero-Idle Serverless Architecture:</strong> 100% event-driven microservices with zero standby compute charges or provisioned server overhead.
+            <li className="gov-item">
+              <span className="gov-bullet">•</span>
+              <div>
+                <strong>Audit Trails:</strong> Every review modification is version-stamped with reviewer identity, timestamp, and field differences.
               </div>
             </li>
           </ul>
         </div>
       </div>
 
-      {/* CloudWatch Operations & Monitoring Bar */}
-      <div className="glass-card monitoring-bar">
-        <div className="monitoring-info">
-          <Activity size={20} className="monitoring-icon" />
+      {/* CloudWatch Operations Link */}
+      <div className="settings-card operations-card">
+        <div className="operations-info">
+          <Activity size={18} className="operations-icon" />
           <div>
-            <h4 className="monitoring-title">AWS CloudWatch Observability Dashboard</h4>
-            <p className="monitoring-desc">
-              Real-time monitoring configured for 5 Lambda microservices, API Gateway requests, Textract execution latency, and DynamoDB throughput.
+            <h4 className="panel-title">CloudWatch Operations Dashboard</h4>
+            <p className="panel-desc">
+              Live telemetry configured for Lambda microservices, API Gateway requests, and DynamoDB throughput.
             </p>
           </div>
         </div>
-        <div className="monitoring-actions">
-          <a
-            href="https://ap-south-1.console.aws.amazon.com/cloudwatch/home?region=ap-south-1#dashboards/dashboard/doc-intelligence-dashboard"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-secondary btn-sm external-link-btn"
-          >
-            <span>Open AWS CloudWatch</span>
-            <ExternalLink size={14} />
-          </a>
-        </div>
+        <a
+          href="https://ap-south-1.console.aws.amazon.com/cloudwatch/home?region=ap-south-1#dashboards/dashboard/doc-intelligence-dashboard"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn btn-secondary btn-sm"
+        >
+          <span>Open AWS CloudWatch</span>
+          <ExternalLink size={13} />
+        </a>
+      </div>
+
+      {/* Footnote */}
+      <div className="page-footnote">
+        <CheckCircle2 size={13} className="page-footnote-icon" />
+        <span>Infrastructure configuration is managed via Infrastructure-as-Code and verified with automated test suites.</span>
       </div>
     </div>
   );

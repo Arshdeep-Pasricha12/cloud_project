@@ -1,132 +1,92 @@
+/* ==========================================================================
+   MetricsCards Component Styles - DocuIntel Finance Operations
+   ========================================================================== */
+
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 1.25rem;
-  margin-bottom: 2rem;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 1024px) {
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .metric-card {
-  padding: 1.35rem;
-  position: relative;
-  overflow: hidden;
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-subtle);
   display: flex;
   flex-direction: column;
 }
-
-.metric-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: var(--border-medium);
-  transition: background var(--transition-normal);
-}
-
-.metric-total::before { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
-.metric-processing::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
-.metric-pending::before { background: linear-gradient(90deg, #8b5cf6, #c084fc); }
-.metric-reviewed::before { background: linear-gradient(90deg, #10b981, #34d399); }
 
 .metric-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.85rem;
+  margin-bottom: 12px;
 }
 
 .metric-title {
-  font-size: 0.825rem;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
-.metric-icon-wrapper {
-  width: 34px;
-  height: 34px;
+.metric-icon-box {
+  width: 28px;
+  height: 28px;
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
-.metric-total .metric-icon { color: #60a5fa; }
-.metric-processing .metric-icon { color: #fbbf24; }
-.metric-pending .metric-icon { color: #c084fc; }
-.metric-reviewed .metric-icon { color: #34d399; }
+.icon-box-neutral {
+  background-color: #F0F3EF;
+  color: #46534A;
+}
 
-.metric-value-row {
-  display: flex;
-  align-items: baseline;
-  gap: 0.45rem;
-  margin-bottom: 0.75rem;
+.icon-box-blue {
+  background-color: #EDF4FA;
+  color: #2B5885;
+}
+
+.icon-box-amber {
+  background-color: #FDF5E8;
+  color: #945B0A;
+}
+
+.icon-box-green {
+  background-color: #EBF5EF;
+  color: #276749;
 }
 
 .metric-value {
-  font-family: 'Outfit', sans-serif;
-  font-size: 2.25rem;
+  font-size: 28px;
   font-weight: 700;
   color: var(--text-primary);
-  line-height: 1;
-}
-
-.metric-unit {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  font-weight: 500;
-}
-
-.metric-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-top: auto;
-  padding-top: 0.65rem;
-  border-top: 1px solid var(--border-subtle);
+  line-height: 1.1;
+  margin-bottom: 6px;
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 
 .metric-subtitle {
-  font-size: 0.725rem;
+  font-size: 11px;
   color: var(--text-muted);
-}
-
-.metric-tag {
-  font-size: 0.675rem;
-  font-weight: 600;
-  color: #94a3b8;
-  background: rgba(255, 255, 255, 0.04);
-  padding: 0.2rem 0.55rem;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--border-subtle);
-  letter-spacing: 0.02em;
-}
-
-.metric-total .metric-tag {
-  color: #93c5fd;
-  border-color: rgba(59, 130, 246, 0.25);
-  background: rgba(59, 130, 246, 0.06);
-}
-
-.metric-processing .metric-tag {
-  color: #fcd34d;
-  border-color: rgba(245, 158, 11, 0.25);
-  background: rgba(245, 158, 11, 0.06);
-}
-
-.metric-pending .metric-tag {
-  color: #d8b4fe;
-  border-color: rgba(139, 92, 246, 0.25);
-  background: rgba(139, 92, 246, 0.06);
-}
-
-.metric-reviewed .metric-tag {
-  color: #6ee7b7;
-  border-color: rgba(16, 185, 129, 0.25);
-  background: rgba(16, 185, 129, 0.06);
+  line-height: 1.3;
 }

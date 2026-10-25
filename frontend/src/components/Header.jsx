@@ -1,72 +1,133 @@
-import React from 'react';
-import { ShieldCheck, User, LogIn, LogOut, CheckCircle2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { Search, Bell, User, LogIn, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './Header.css';
 
-export default function Header({ title = 'Dashboard' }) {
+export default function Header({ onSearch, onOpenUpload }) {
+  const location = useLocation();
+  const navigate = useNavigate();
   const { user, isAuthenticated, openAuthModal, signOut } = useAuth();
+  const [searchValue, setSearchValue] = useState('');
 
-  const userInitial = user?.email ? user.email.charAt(0).toUpperCase() : 'U';
+  // Extract initials
+  const userInitial = user?.email 
+    ? user.email.slice(0, 2).toUpperCase() 
+    : 'AP';
+
+  // Compute breadcrumb
+  const getBreadcrumbs = () => {
+    const path = location.pathname;
+    if (path === '/') {
+      return (
+        <div className="breadcrumb-nav">
+          <span className="breadcrumb-parent">Workspace</span>
+          <span className="breadcrumb-sep">/</span>
+          <span className="breadcrumb-current">Overview</span>
+        </div>
+      );
+    }
+    if (path.startsWith('/documents')) {
+      return (
+        <div className="breadcrumb-nav">
+          <Link to="/" className="breadcrumb-parent">Workspace</Link>
+          <span className="breadcrumb-sep">/</span>
+          <span className="breadcrumb-current">Documents</span>
+        </div>
+      );
+    }
+    if (path.startsWith('/review/')) {
+      return (
+        <div className="breadcrumb-nav">
+          <Link to="/" className="breadcrumb-parent">Workspace</Link>
+          <span className="breadcrumb-sep">/</span>
+          <span className="breadcrumb-current">Review invoice</span>
+        </div>
+      );
+    }
+    if (path.startsWith('/review')) {
+      return (
+        <div className="breadcrumb-nav">
+          <Link to="/" className="breadcrumb-parent">Workspace</Link>
+          <span className="breadcrumb-sep">/</span>
+          <span className="breadcrumb-current">Review queue</span>
+        </div>
+      );
+    }
+    if (path.startsWith('/settings')) {
+      return (
+        <div className="breadcrumb-nav">
+          <Link to="/" className="breadcrumb-parent">Workspace</Link>
+          <span className="breadcrumb-sep">/</span>
+          <span className="breadcrumb-current">Settings</span>
+        </div>
+      );
+    }
+    return (
+      <div className="breadcrumb-nav">
+        <span className="breadcrumb-parent">Workspace</span>
+        <span className="breadcrumb-sep">/</span>
+        <span className="breadcrumb-current">DocuIntel</span>
+      </div>
+    );
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      if (onSearch) {
+        onSearch(searchValue);
+      }
+      if (location.pathname !== '/documents') {
+        navigate(`/documents?search=${encodeURIComponent(searchValue)}`);
+      }
+    }
+  };
 
   return (
     <header className="app-header" id="app-header">
+      {/* Left Breadcrumb */}
       <div className="header-left">
-        <h1 className="header-title" id="page-title">{title}</h1>
-        <span className="env-badge enterprise-badge">Enterprise Edition</span>
+        {getBreadcrumbs()}
       </div>
 
+      {/* Right Controls */}
       <div className="header-right">
-        {/* AWS Backend Status Pill */}
-        <div className="aws-connection-status conn-active" id="aws-status-indicator" title="AWS Serverless Infrastructure Active">
-          <CheckCircle2 size={15} className="status-icon-active" />
-          <div className="connection-text">
-            <span className="conn-title-active">AWS Operational</span>
-            <span className="conn-state">ap-south-1 (Mumbai)</span>
-          </div>
+        {/* Search Bar */}
+        <div className="header-search-wrap">
+          <Search size={14} className="header-search-icon" />
+          <input
+            type="text"
+            className="header-search-input"
+            placeholder="Search documents or vendors"
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
+            aria-label="Search documents or vendors"
+          />
+          <kbd className="header-search-shortcut">⌘K</kbd>
         </div>
 
+        {/* Notifications Icon Button */}
+        <button
+          type="button"
+          className="header-icon-btn"
+          title="Notifications"
+          aria-label="Notifications"
+        >
+          <Bell size={16} />
+        </button>
+
         {/* User Profile Pill / Auth Button */}
-        {!isAuthenticated ? (
-          <button
-            type="button"
-            className="user-profile-pill user-profile-interactive"
-            id="btn-open-auth-modal"
-            onClick={() => openAuthModal('signin')}
-            title="Sign in with your Amazon Cognito account"
-          >
-            <div className="user-avatar avatar-signin">
-              <LogIn size={15} />
-            </div>
-            <div className="user-info">
-              <span className="user-name">Sign In / Register</span>
-              <span className="user-role">Single Sign-On / IAM</span>
-            </div>
-          </button>
-        ) : (
-          <div className="user-profile-wrapper">
-            <div className="user-profile-pill pill-logged-in" id="user-profile-badge">
-              <div className="user-avatar avatar-authenticated">
-                <span>{userInitial}</span>
-              </div>
-              <div className="user-info">
-                <span className="user-name" title={user.email}>{user.email}</span>
-                <span className="user-role user-role-verified">
-                  <ShieldCheck size={11} />
-                  <span>Cognito Verified</span>
-                </span>
-              </div>
-            </div>
-            <button
-              type="button"
-              className="btn-signout"
-              onClick={signOut}
-              title="Sign Out"
-              id="btn-user-signout"
-            >
-              <LogOut size={16} />
-            </button>
-          </div>
-        )}
+        <button
+          type="button"
+          className="header-avatar-btn"
+          id={isAuthenticated ? "user-profile-badge" : "btn-open-auth-modal"}
+          onClick={() => isAuthenticated ? signOut() : openAuthModal('signin')}
+          title={isAuthenticated ? `Signed in as ${user.email} (Click to sign out)` : 'Sign In / Register'}
+          aria-label="User account"
+        >
+          <span className="header-avatar-initials">{userInitial}</span>
+        </button>
       </div>
     </header>
   );

@@ -16,9 +16,9 @@ export const DOCUMENT_STATUSES = {
   },
   PENDING_REVIEW: {
     key: 'PENDING_REVIEW',
-    label: 'Pending Review',
+    label: 'Needs review',
     description: 'Extracted; human review required',
-    className: 'pending-review'
+    className: 'needs-review'
   },
   REVIEWED: {
     key: 'REVIEWED',

@@ -167,8 +167,8 @@ export default function AuthModal() {
               <ShieldCheck size={22} className="shield-icon" />
             </div>
             <div>
-              <h2 className="auth-title">Amazon Cognito Authentication</h2>
-              <p className="auth-subtitle">Serverless user access for Document Intelligence</p>
+              <h2 className="auth-title">Workspace Authentication</h2>
+              <p className="auth-subtitle">Secure access to your document workspace</p>
             </div>
           </div>
           <button 

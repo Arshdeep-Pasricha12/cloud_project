@@ -1,188 +1,125 @@
+/* ==========================================================================
+   Header Component Styles - DocuIntel Finance Operations
+   ========================================================================== */
+
 .app-header {
-  height: 72px;
-  background: rgba(10, 13, 20, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  height: var(--header-height);
+  background-color: var(--surface-card);
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 2rem;
+  padding: 0 36px;
   position: sticky;
   top: 0;
   z-index: 20;
 }
 
+@media (max-width: 900px) {
+  .app-header {
+    padding: 0 20px;
+  }
+}
+
+/* Breadcrumb */
 .header-left {
   display: flex;
   align-items: center;
-  gap: 1rem;
 }
 
-.header-title {
-  font-size: 1.4rem;
-  font-weight: 700;
+.breadcrumb-nav {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+}
+
+.breadcrumb-parent {
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.breadcrumb-parent:hover {
   color: var(--text-primary);
 }
 
-.env-badge {
-  font-size: 0.7rem;
-  font-weight: 600;
-  background: rgba(99, 102, 241, 0.15);
-  color: #a5b4fc;
-  padding: 0.2rem 0.6rem;
-  border-radius: var(--radius-full);
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+.breadcrumb-sep {
+  color: #B5BFB7;
+  font-size: 12px;
 }
 
-.enterprise-badge {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(56, 189, 248, 0.15));
-  border: 1px solid rgba(99, 102, 241, 0.35);
-  color: #c7d2fe;
-  box-shadow: 0 0 12px rgba(99, 102, 241, 0.15);
+.breadcrumb-current {
+  color: var(--text-primary);
+  font-weight: 550;
 }
 
+/* Header Right Controls */
 .header-right {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 12px;
 }
 
-/* AWS Connection Indicator */
-.aws-connection-status {
+/* Search Box */
+.header-search-wrap {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  padding: 0.45rem 0.85rem;
-  border-radius: var(--radius-md);
+  width: 250px;
 }
 
-.conn-active {
-  background: rgba(16, 185, 129, 0.08);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+@media (max-width: 768px) {
+  .header-search-wrap {
+    width: 170px;
+  }
 }
 
-.status-icon-active {
-  color: #34d399;
+.header-search-icon {
+  position: absolute;
+  left: 10px;
+  color: var(--text-muted);
+  pointer-events: none;
 }
 
-.connection-text {
-  display: flex;
-  flex-direction: column;
+.header-search-input {
+  width: 100%;
+  padding: 6px 36px 6px 30px;
+  font-size: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  background-color: var(--surface-secondary);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
 }
 
-.conn-title-active {
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: #34d399;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  line-height: 1;
+.header-search-input:focus {
+  border-color: var(--border-medium);
+  background-color: var(--surface-card);
 }
 
-.conn-state {
-  font-size: 0.725rem;
-  color: var(--text-secondary);
+.header-search-shortcut {
+  position: absolute;
+  right: 9px;
+  font-size: 10px;
+  font-family: inherit;
+  color: var(--text-muted);
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 1px 4px;
   line-height: 1.2;
 }
 
-/* User Profile & Auth Pill */
-.user-profile-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.user-profile-pill {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  padding: 0.35rem 0.85rem 0.35rem 0.45rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-full);
-  transition: all var(--transition-fast);
-}
-
-.user-profile-interactive {
-  cursor: pointer;
-}
-
-.user-profile-interactive:hover {
-  background: rgba(99, 102, 241, 0.12);
-  border-color: rgba(99, 102, 241, 0.4);
-  box-shadow: 0 0 16px rgba(99, 102, 241, 0.2);
-  transform: translateY(-1px);
-}
-
-.user-avatar {
+/* Icon button */
+.header-icon-btn {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-weight: 700;
-  font-size: 0.85rem;
-}
-
-.avatar-signin {
-  background: rgba(99, 102, 241, 0.18);
-  color: #818cf8;
-}
-
-.avatar-authenticated {
-  background: linear-gradient(135deg, #6366f1, #38bdf8);
-  color: #ffffff;
-  box-shadow: 0 0 10px rgba(99, 102, 241, 0.4);
-}
-
-.pill-logged-in {
-  background: rgba(18, 25, 41, 0.8);
-  border-color: rgba(99, 102, 241, 0.35);
-}
-
-.user-info {
-  display: flex;
-  flex-direction: column;
-  text-align: left;
-  max-width: 170px;
-}
-
-.user-name {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  line-height: 1.1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.user-role {
-  font-size: 0.675rem;
-  color: var(--text-muted);
-  line-height: 1;
-}
-
-.user-role-verified {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  color: #34d399;
-  font-weight: 600;
-}
-
-.btn-signout {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  color: #f87171;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -190,8 +127,57 @@
   transition: all var(--transition-fast);
 }
 
-.btn-signout:hover {
-  background: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-  transform: scale(1.05);
+.header-icon-btn:hover {
+  background-color: var(--surface-hover);
+  color: var(--text-primary);
 }
+
+/* Avatar button */
+.header-avatar-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: #D9E5DC;
+  border: 1px solid transparent;
+  color: var(--action-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  padding: 0;
+}
+
+.header-avatar-btn:hover {
+  transform: scale(1.04);
+  box-shadow: 0 0 0 2px var(--action-focus-ring);
+}
+
+.header-avatar-initials {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+@media (max-width: 640px) {
+  .app-header {
+    padding: 0 16px;
+  }
+
+  .header-search-box {
+    width: 140px;
+  }
+
+  .header-search-shortcut {
+    display: none;
+  }
+
+  .breadcrumb-root {
+    display: none;
+  }
+
+  .breadcrumb-sep {
+    display: none;
+  }
+}
+

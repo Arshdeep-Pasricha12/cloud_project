@@ -4,16 +4,12 @@ import {
   FileText, 
   X, 
   AlertTriangle, 
-  ShieldCheck, 
   CheckCircle2, 
   RefreshCw, 
-  ExternalLink,
-  Layers,
-  Server,
-  Cpu
+  Layers
 } from 'lucide-react';
 import { ALLOWED_FILE_TYPES, MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from '../utils/constants';
-import { formatBytes, formatDate } from '../utils/formatters';
+import { formatBytes } from '../utils/formatters';
 import { 
   validateFile, 
   executeDocumentUpload, 
@@ -22,7 +18,7 @@ import {
 } from '../services/uploadService';
 import './UploadPanel.css';
 
-export default function UploadPanel({ onUploadSuccess }) {
+export default function UploadPanel({ onUploadSuccess, isModal = false, isOpen = true, onClose }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadState, setUploadState] = useState('idle'); // idle | presigning | uploading | success | error
@@ -33,7 +29,8 @@ export default function UploadPanel({ onUploadSuccess }) {
 
   const fileInputRef = useRef(null);
   const isConfigured = isUploadConfigured();
-  const configuredEndpoint = getUploadApiUrl();
+
+  if (isModal && !isOpen) return null;
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -94,11 +91,10 @@ export default function UploadPanel({ onUploadSuccess }) {
   const handleUploadClick = async () => {
     if (!selectedFile) return;
 
-    // Strict configuration check: never fake upload or switch to mock
     if (!isConfigured) {
       setUploadState('error');
       setErrorMessage(
-        'Upload API endpoint is not yet configured. Set VITE_UPLOAD_API_URL in frontend/.env to your deployed API Gateway or Lambda URL.'
+        'Upload API endpoint is not configured. Set VITE_UPLOAD_API_URL in frontend/.env to your deployed API Gateway.'
       );
       return;
     }
@@ -119,7 +115,6 @@ export default function UploadPanel({ onUploadSuccess }) {
         }
       });
 
-      // Confirmed only after S3 HTTP 200 response
       setUploadResult(result);
       setUploadState('success');
       setUploadProgress(100);
@@ -134,27 +129,26 @@ export default function UploadPanel({ onUploadSuccess }) {
 
   const isUploading = uploadState === 'presigning' || uploadState === 'uploading';
 
-  return (
-    <div className="glass-card upload-panel" id="upload-panel">
+  const content = (
+    <div className={`upload-panel-container ${isModal ? 'upload-panel-modal' : ''}`} id="upload-panel">
       <div className="upload-header">
         <div>
-          <h2 className="upload-title">Ingest Document</h2>
+          <h3 className="upload-title">Upload document</h3>
           <p className="upload-subtitle">
-            Upload invoices and receipts directly to private Amazon S3 storage using short-lived presigned PUT URLs.
+            Upload an invoice or receipt for automated line-item extraction and verification.
           </p>
         </div>
-        <span className="phase-badge badge-active">AES-256 S3 Ingestion</span>
+        {isModal && onClose && (
+          <button
+            type="button"
+            className="btn-close-modal"
+            onClick={onClose}
+            aria-label="Close modal"
+          >
+            <X size={16} />
+          </button>
+        )}
       </div>
-
-      {/* Backend Configuration Notice if endpoint is not set */}
-      {!isConfigured && (
-        <div className="upload-config-notice" id="upload-config-notice">
-          <Server size={16} className="config-icon" />
-          <div className="config-text">
-            <strong>AWS Endpoint Required:</strong> Configure <code>VITE_UPLOAD_API_URL</code> in <code>frontend/.env</code> to point to your API Gateway or local Lambda invocation bridge to enable live S3 uploads.
-          </div>
-        </div>
-      )}
 
       {/* Drag & Drop Zone */}
       {uploadState !== 'success' && (
@@ -178,23 +172,23 @@ export default function UploadPanel({ onUploadSuccess }) {
 
           {!selectedFile ? (
             <div className="dropzone-content">
-              <div className="dropzone-icon-circle">
-                <UploadCloud size={32} className="dropzone-icon" />
+              <div className="dropzone-icon-box">
+                <UploadCloud size={24} className="dropzone-icon" />
               </div>
-              <div className="dropzone-instructions">
-                <span className="dropzone-primary-text">
-                  <strong>Click to browse</strong> or drag & drop invoice
+              <div className="dropzone-text">
+                <span className="dropzone-title">
+                  <strong>Click to browse</strong> or drag and drop
                 </span>
-                <span className="dropzone-secondary-text">
-                  Supports PDF, PNG, JPG up to {MAX_FILE_SIZE_MB} MB
+                <span className="dropzone-hint">
+                  PDF, PNG, JPG up to {MAX_FILE_SIZE_MB}MB
                 </span>
               </div>
             </div>
           ) : (
-            <div className="file-preview-box">
+            <div className="file-preview-row">
               <div className="file-preview-info">
                 <div className="file-icon-box">
-                  <FileText size={24} />
+                  <FileText size={18} />
                 </div>
                 <div className="file-meta">
                   <span className="file-name" title={selectedFile.name}>{selectedFile.name}</span>
@@ -207,14 +201,14 @@ export default function UploadPanel({ onUploadSuccess }) {
                 <button
                   type="button"
                   id="btn-remove-selected-file"
-                  className="btn-icon-remove"
+                  className="btn-remove-file"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleClearSelection();
                   }}
                   title="Remove selected file"
                 >
-                  <X size={16} />
+                  <X size={15} />
                 </button>
               )}
             </div>
@@ -224,166 +218,133 @@ export default function UploadPanel({ onUploadSuccess }) {
 
       {/* Upload Progress Bar */}
       {isUploading && (
-        <div className="upload-progress-container" id="upload-progress-box">
-          <div className="progress-status-row">
-            <span className="progress-status-label">
+        <div className="upload-progress-box" id="upload-progress-box">
+          <div className="progress-label-row">
+            <span className="progress-status-text">
               {uploadState === 'presigning' ? (
                 <>
-                  <RefreshCw size={14} className="spin-icon" />
-                  <span>Requesting secure presigned S3 URL from Lambda...</span>
+                  <RefreshCw size={13} className="spin-icon" />
+                  <span>Preparing secure cloud upload...</span>
                 </>
               ) : (
                 <>
-                  <UploadCloud size={14} className="pulse-icon" />
-                  <span>Uploading directly to private Amazon S3 bucket ({uploadProgress}%)...</span>
+                  <UploadCloud size={13} />
+                  <span>Uploading to storage ({uploadProgress}%)...</span>
                 </>
               )}
             </span>
-            <span className="progress-percentage">{uploadProgress}%</span>
+            <span className="progress-percent tabular-nums">{uploadProgress}%</span>
           </div>
           <div className="progress-bar-track">
             <div 
               className="progress-bar-fill" 
-              style={{ width: `${Math.max(8, uploadProgress)}%` }}
+              style={{ width: `${Math.max(6, uploadProgress)}%` }}
             />
           </div>
         </div>
       )}
 
-      {/* Validation Error Banner */}
+      {/* Validation Error */}
       {validationError && (
-        <div className="upload-notice notice-error" id="validation-error-box">
-          <AlertTriangle size={16} className="notice-icon" />
-          <span className="notice-text">{validationError}</span>
+        <div className="upload-alert alert-warning" id="upload-validation-error">
+          <AlertTriangle size={15} className="alert-icon" />
+          <span>{validationError}</span>
         </div>
       )}
 
-      {/* Network or S3 Upload Error Banner with Retry */}
+      {/* Upload Error */}
       {uploadState === 'error' && errorMessage && (
-        <div className="upload-error-card" id="upload-error-box">
-          <div className="error-header">
-            <AlertTriangle size={18} className="error-icon" />
-            <span className="error-title">Upload Failed</span>
-          </div>
-          <p className="error-message">{errorMessage}</p>
-          <div className="error-actions">
-            <button
-              type="button"
-              id="btn-retry-upload"
-              className="btn btn-secondary btn-sm"
-              onClick={handleUploadClick}
-              disabled={isUploading}
-            >
-              <RefreshCw size={14} />
-              <span>Retry Upload</span>
-            </button>
-            <button
-              type="button"
-              className="btn-text-dim btn-sm"
-              onClick={handleClearSelection}
-            >
-              Cancel
-            </button>
+        <div className="upload-alert alert-error" id="upload-error-box">
+          <AlertTriangle size={15} className="alert-icon" />
+          <div className="alert-body">
+            <strong>Upload Failed</strong>
+            <span>{errorMessage}</span>
           </div>
         </div>
       )}
 
-      {/* Success Card Confirmed by S3 */}
+      {/* Success State */}
       {uploadState === 'success' && uploadResult && (
-        <div className="upload-success-card" id="upload-success-card">
-          <div className="success-header">
-            <div className="success-icon-badge">
-              <CheckCircle2 size={22} className="success-icon" />
-            </div>
+        <div className="upload-success-box" id="upload-success-box">
+          <div className="success-header-row">
+            <CheckCircle2 size={18} className="success-icon" />
             <div>
-              <h3 className="success-title">Document Upload Confirmed</h3>
-              <p className="success-subtitle">
-                Successfully uploaded binary directly to Amazon S3 via presigned PUT.
+              <h4 className="success-title">Document uploaded successfully</h4>
+              <p className="success-desc">
+                Your file is stored securely and queued for automated extraction.
               </p>
             </div>
           </div>
 
-          <div className="success-meta-grid">
-            <div className="meta-item">
-              <span className="meta-label">Document ID</span>
-              <span className="meta-value code-font">{uploadResult.documentId}</span>
+          <div className="success-meta-details">
+            <div className="meta-detail-item">
+              <span className="meta-label">File</span>
+              <span className="meta-value">{uploadResult.fileName}</span>
             </div>
-            <div className="meta-item">
-              <span className="meta-label">S3 Object Key</span>
-              <span className="meta-value code-font" title={uploadResult.s3Key}>
-                {uploadResult.s3Key}
-              </span>
+            <div className="meta-detail-item">
+              <span className="meta-label">Size</span>
+              <span className="meta-value">{formatBytes(uploadResult.fileSizeBytes)}</span>
             </div>
-            <div className="meta-item">
-              <span className="meta-label">Target Bucket</span>
-              <span className="meta-value">{uploadResult.bucket || 'Configured S3 Bucket'}</span>
-            </div>
-            <div className="meta-item">
-              <span className="meta-label">File Details</span>
-              <span className="meta-value">
-                {uploadResult.fileName} ({formatBytes(uploadResult.fileSizeBytes)})
-              </span>
-            </div>
-            <div className="meta-item">
-              <span className="meta-label">Uploaded At</span>
-              <span className="meta-value">{formatDate(uploadResult.uploadedAt)}</span>
-            </div>
-            {uploadResult.etag && (
-              <div className="meta-item">
-                <span className="meta-label">S3 ETag</span>
-                <span className="meta-value code-font">{uploadResult.etag}</span>
-              </div>
-            )}
           </div>
 
-          <div className="success-pipeline-note">
-            <Cpu size={14} />
-            <span>Document dispatched to Amazon Textract serverless pipeline for automated OCR extraction.</span>
-          </div>
-
-          <div className="success-actions">
+          <div className="success-actions-row">
             <button
               type="button"
               id="btn-upload-another"
               className="btn btn-secondary btn-sm"
               onClick={handleClearSelection}
             >
-              <UploadCloud size={14} />
-              <span>Upload Another Document</span>
+              Upload another
             </button>
+            {isModal && onClose && (
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={onClose}
+              >
+                Done
+              </button>
+            )}
           </div>
         </div>
       )}
 
       {/* Action Controls for Idle State */}
       {uploadState !== 'success' && (
-        <div className="upload-actions">
+        <div className="upload-actions-bar">
           <button
             type="button"
-            id="btn-trigger-upload"
+            id="btn-execute-upload"
             className="btn btn-primary"
-            disabled={!selectedFile || isUploading}
             onClick={handleUploadClick}
+            disabled={!selectedFile || isUploading}
           >
-            {isUploading ? (
-              <>
-                <RefreshCw size={16} className="spin-icon" />
-                <span>Processing...</span>
-              </>
-            ) : (
-              <>
-                <UploadCloud size={16} />
-                <span>Upload to S3</span>
-              </>
-            )}
+            <UploadCloud size={15} />
+            <span>{isUploading ? 'Uploading...' : 'Upload document'}</span>
           </button>
-
-          <span className="upload-security-note">
-            <ShieldCheck size={14} />
-            <span>Direct browser-to-S3 upload via short-lived presigned URLs (Private SSE-S3 · 300s expiry)</span>
-          </span>
+          {selectedFile && !isUploading && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleClearSelection}
+            >
+              Cancel
+            </button>
+          )}
         </div>
       )}
     </div>
   );
+
+  if (isModal) {
+    return (
+      <div className="modal-backdrop" onClick={onClose}>
+        <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+          {content}
+        </div>
+      </div>
+    );
+  }
+
+  return content;
 }
