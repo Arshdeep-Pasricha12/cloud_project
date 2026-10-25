@@ -1,8 +1,8 @@
-# Serverless Document Intelligence Platform
+# DocuIntel — Serverless Financial Document Intelligence & Operations Platform
 
-An end-to-end cloud-native serverless web application designed to ingest real business documents (invoices, receipts), extract relevant financial data using **Amazon Textract (`AnalyzeExpense`)**, present extractions in an interactive human-in-the-loop dashboard, and persist verified corrections in **Amazon DynamoDB** while preserving raw extraction immutability.
+An enterprise-grade, serverless cloud platform engineered on Amazon Web Services (AWS) to automate accounts payable, invoice extraction, and financial document operations. 
 
-Built as an enterprise-grade cloud architecture project for academic submission and practical deployment on Amazon Web Services.
+DocuIntel ingests complex business documents (invoices, receipts, purchase orders), processes them through a multi-tier cloud OCR and AI pipeline (**Amazon Textract** with **Amazon Rekognition** fallback), presents extractions in an interactive human-in-the-loop review workstation, validates arithmetic calculations, guards against duplicate submissions, and persists verified audit records into **Amazon DynamoDB** while strictly maintaining raw extraction immutability.
 
 ---
 
@@ -11,191 +11,204 @@ Built as an enterprise-grade cloud architecture project for academic submission 
 ```
                                     +-----------------------------------------+
                                     |         Amazon Cognito User Pool        |
-                                    |         (JWT Authentication)            |
+                                    |       (JWT & REFRESH_TOKEN_AUTH)        |
                                     +--------------------+--------------------+
                                                          |
-                                            (JWT Bearer) |
+                                            (JWT Bearer) | (Silent Auto-Renewal)
                                                          v
-[ React Dashboard (Vite) ]  ======>  [ Amazon API Gateway (REST API) ]
-            |                                      |
-            | (Direct Presigned PUT)               | Proxy
-            v                                      v
- [ Amazon S3 Private Bucket ] <====== [ AWS Lambda Functions (Python 3.12) ]
-                                                   |
-                             +---------------------+---------------------+
-                             |                     |                     |
-                             v                     v                     v
-                    [ Amazon Textract ]   [ Amazon DynamoDB ]   [ Amazon CloudWatch ]
-                   (AnalyzeExpense API)    (Documents Table)     (Centralized Logs)
++-------------------------------+  ======>  +---------------------------------+
+|   React Operations Frontend   |           |    Amazon API Gateway REST API  |
+|  (S3 Static Website Hosting)  |           |   (Cognito Authorizer & CORS)   |
++---------------+---------------+           +----------------+----------------+
+                |                                            |
+                | (Direct Presigned PUT)                     | Lambda Proxy
+                v                                            v
++-------------------------------+ <======   +---------------------------------+
+|  Amazon S3 Document Bucket    |           |   AWS Lambda Microservices      |
+|  (Private, SSE-S3 AES-256)    |           |        (Python 3.12)            |
++-------------------------------+           +----------------+----------------+
+                                                             |
+                             +-------------------------------+-------------------------------+
+                             |                               |                               |
+                             v                               v                               v
+            +---------------------------------+  +-----------------------+  +-----------------------+
+            |  Multi-Tier Extraction Engine   |  |   Amazon DynamoDB     |  |   Amazon CloudWatch   |
+            |  1. Textract (AnalyzeExpense)   |  |   (Documents Table &  |  |  (Metrics, Alarms,    |
+            |  2. Rekognition (DetectText)    |  |  UserDocumentsIndex)  |  |  Executive Dashboard) |
+            |  3. Serverless PyPDF Parser     |  |                       |  |                       |
+            +---------------------------------+  +-----------------------+  +-----------------------+
 ```
 
----
-
-## 2. Technology Stack
-
-- **Frontend**:
-  - React 19 + Vite
-  - React Router v7
-  - Lucide React (Clean icon set)
-  - Custom Vanilla CSS Design System (Glassmorphic dark aesthetic, Inter & Outfit typography, zero Tailwind)
-- **Backend (Serverless Microservices)**:
-  - Python 3.12 AWS Lambda functions
-  - Amazon API Gateway (REST with Cognito Authorizer)
-  - Amazon Cognito User Pools (Authentication & multi-tenant isolation)
-  - Amazon S3 (Private document storage with short-lived presigned URLs)
-  - Amazon Textract (`AnalyzeExpense` API for financial documents)
-  - Amazon DynamoDB (On-Demand billing, immutable raw extraction + separate corrections)
-  - Amazon CloudWatch (Logs and metrics)
-- **Development & IaC Tooling**:
-  - AWS CLI v2
-  - Boto3
-  - Pytest & Moto (AWS service mocking)
-  - Node.js & npm
+### Architecture Highlights
+- **Direct-to-S3 Ingestion**: Clients request cryptographic presigned PUT URLs via API Gateway; documents are uploaded directly to S3 with `AES256` server-side encryption, bypassing Lambda memory and execution limits.
+- **Event-Driven Processing**: S3 uploads trigger processing asynchronously via Lambda, isolating ingestion throughput from compute latency.
+- **Multi-Tier AI/OCR Resilience**: Primary extraction uses Amazon Textract `AnalyzeExpense`. If Textract experiences subscription delays or regional throttling, the system seamlessly falls back to Amazon Rekognition OCR (`DetectText`) for receipt and invoice images, and bundled PyPDF parsing for PDF documents.
+- **Strict Data Immutability**: The original AI extraction is permanently sealed in `rawExtraction`. User modifications, human approvals, and line-item corrections are stored in an independent `correctedData` object with complete audit timestamps.
+- **Persistent Multi-Tenant Security**: User workspaces are keyed by Amazon Cognito `sub` IDs. Sessions automatically rotate via Cognito's `REFRESH_TOKEN_AUTH` flow, ensuring zero session loss on reload.
 
 ---
 
-## 3. Directory Layout
-
-```
-cloud_project/ (document-intelligence-platform)
-├── frontend/
-│   ├── public/
-│   ├── src/
-│   │   ├── components/       # Reusable UI (Sidebar, Header, Metrics, Upload, Table, Badge)
-│   │   ├── pages/            # Dashboard, Documents, Document Review, Settings
-│   │   ├── services/         # API Gateway & S3 client abstraction (api.js)
-│   │   ├── hooks/            # useDocuments state hook
-│   │   ├── utils/            # Status enums, formatters, phase constants
-│   │   ├── App.jsx           # Routing & layout shell
-│   │   ├── main.jsx          # Entry point with BrowserRouter
-│   │   └── index.css         # Design system tokens, glassmorphism, animations
-│   ├── .env.example          # Placeholders for AWS credentials & endpoints (no secrets)
-│   └── package.json
-├── backend/
-│   ├── shared/               # Shared response utils, CORS, Decimal encoder, models
-│   ├── functions/
-│   │   ├── create-upload/    # S3 presigned PUT URL generator
-│   │   ├── process-document/ # Textract AnalyzeExpense worker & normalizer
-│   │   ├── get-document/     # Document retrieval & presigned GET view URL
-│   │   ├── list-documents/   # DynamoDB GSI user query & status aggregation
-│   │   └── save-corrections/ # Immutability-preserving human corrections writer
-│   ├── tests/                # Pytest unit tests for models and formatting
-│   └── requirements.txt      # Python dependencies for local development
-├── infrastructure/
-│   └── README.md             # AWS serverless IaC specifications & resource definitions
-├── docs/
-│   ├── architecture.md       # High-level architecture, state machines, and data schemas
-│   └── implementation-plan.md# Ordered milestones from local shell to production AWS
-├── scripts/
-│   └── README.md             # Deployment automation & helper scripts
-├── .gitignore                # Node, Python, AWS, and environment files ignore rules
-└── README.md                 # Project overview and setup guide
-```
-
----
-
----
-
-## 4. Live Production Endpoints & Cloud Resources
+## 2. Live Production Endpoints & Cloud Resources
 
 | Service | Cloud Resource | Description | Live Endpoint / Identifier |
 | :--- | :--- | :--- | :--- |
 | **Web Hosting** | Amazon S3 Static Website | Production Single-Page React App | **[Live Web App](http://doc-intelligence-frontend-399383129700.s3-website.ap-south-1.amazonaws.com)** |
-| **Authentication** | Amazon Cognito User Pool | User Auth & JWT token issuance | `ap-south-1_ZIRwwnB44` (Client: `4ai8598ftdkf0fc2hm4bd1v75k`) |
+| **Authentication** | Amazon Cognito User Pool | User Auth, JWT & Silent Refresh | `ap-south-1_ZIRwwnB44` (Client: `4ai8598ftdkf0fc2hm4bd1v75k`) |
 | **API Gateway** | REST API (`doc-intelligence-api`) | Cognito Authorized REST routes | `https://wxgm03t7wc.execute-api.ap-south-1.amazonaws.com/prod` |
 | **Document Storage** | Amazon S3 Private Bucket | Encrypted storage (`AES256`, CORS) | `doc-intelligence-uploads-399383129700` |
 | **Document Database** | Amazon DynamoDB | On-Demand table with GSI | `doc-intelligence-documents` (`UserDocumentsIndex`) |
-| **AI Extraction** | Amazon Textract | Financial document OCR pipeline | `AnalyzeExpense` API (asynchronous S3 trigger) |
+| **AI & OCR Extraction** | Amazon Textract + Rekognition | Multi-tier financial OCR pipeline | Textract `AnalyzeExpense` & Rekognition `DetectText` |
 | **Operations** | Amazon CloudWatch | Alarms, Metric Filters & Dashboard | **[Live Executive Dashboard](https://ap-south-1.console.aws.amazon.com/cloudwatch/home?region=ap-south-1#dashboards/dashboard/doc-intelligence-dashboard)** |
 
 ---
 
-## 5. Milestone Implementation Summary (All 8 Milestones Completed)
+## 3. Core Enterprise Capabilities
 
-- [x] **Milestone 0: Project Shell & UI Foundation** — Vite React SPA with dark glassmorphism, responsive grid, dynamic navigation, and clean empty states.
-- [x] **Milestone 1: Amazon Cognito Authentication** — User Pool (`ap-south-1_ZIRwwnB44`), Public SPA Client, email code verification, dynamic avatar, and session management.
-- [x] **Milestone 2: S3 Document Ingestion & Presigned URLs** — Client validation, presigned PUT URL generation with cryptographic signature binding, direct binary transfer with progress tracking.
-- [x] **Milestone 3: Amazon API Gateway & Cloud Lambda Deployment** — REST API (`wxgm03t7wc`), Cognito JWT Authorizer (`6i102z`), CORS preflight, and default gateway error responses.
-- [x] **Milestone 4: Amazon Textract AI Extraction Pipeline** — Event-driven Lambda (`doc-intelligence-process-document`) triggered on `uploads/`, extraction normalizer with field confidence metrics.
-- [x] **Milestone 5: Amazon DynamoDB Persistence & Query APIs** — Pay-per-request table with GSI (`UserDocumentsIndex`), `list-documents` calculating status metrics, `get-document` with presigned view URLs.
-- [x] **Milestone 6: Human-in-the-Loop Corrections & Review UI** — Dual-pane review workstation (`DocumentReviewPage.jsx`), editable line items, raw extraction immutability guarantee (`rawExtraction` untouched, edits stored in `correctedData`).
-- [x] **Milestone 7: Testing, Diagnostics & Observability** — 14-day CloudWatch log retention, metric filter (`DocumentProcessingErrors`), alarms, executive dashboard, and 36 backend + 18 frontend automated tests (100% pass rate).
-- [x] **Milestone 8: Cloud Deployment & Presentation Prep** — Production S3 static website hosting, SPA routing fallback (`IndexDocument: index.html`, `ErrorDocument: index.html`), automated deployment script, and academic evaluation runbook ([`docs/college-presentation-guide.md`](docs/college-presentation-guide.md)).
+### 1. Multi-Tier AI Document Extraction
+- Extracts structured key-value pairs: Vendor Name, Invoice Number, Invoice Date, Due Date, Payment Terms, Subtotal, Tax / VAT, and Total Amount.
+- Normalizes itemized line tables with descriptions, quantities, unit prices, and line totals.
+- Assigns field-level confidence scores (0–100%) so reviewers can focus specifically on low-confidence values.
+
+### 2. Automated Financial Reconciliation & Arithmetic Audit
+- Automatically validates invoice arithmetic: verifies that `Subtotal + Tax == Total Amount`.
+- Immediately flags calculation discrepancies, rounding anomalies, or hidden vendor charges with clear inline alerts in the review workstation.
+
+### 3. Duplicate Invoice & Fraud Prevention Guard
+- Cross-references incoming invoice numbers and vendor identities against all historical records in the workspace.
+- Warns accounting operators if an identical invoice number from the same vendor has already been ingested or approved.
+
+### 4. 1-Click Accounting & ERP Export Suite
+- **Reconciliation CSV**: Generates a standard accounting CSV with vendor names, invoice numbers, dates, subtotal, tax, net total, status, and OCR confidence ratings for instant spreadsheet reconciliation.
+- **Enterprise ERP JSON**: Exports standard ERP schemas compatible with SAP, Oracle NetSuite, and QuickBooks, including line items, tax breakdowns, and complete AWS processing metadata.
+
+### 5. Human-in-the-Loop Review Workstation
+- Side-by-side interactive document workstation with integrated high-resolution document viewer (zoom, pan, fit-to-width).
+- Real-time editable invoice fields and line items with instant total recalculation.
+- One-click approval workflows that update document status to `REVIEWED` in DynamoDB.
+
+### 6. Zero-Downtime Session Persistence
+- Built-in automatic token renewal using Cognito's `REFRESH_TOKEN_AUTH` flow.
+- Seamlessly refreshes authentication tokens in the background within 60 seconds of expiration; eliminates abrupt logouts or "empty upload" states on page refresh.
 
 ---
 
-## 6. Prerequisites
+## 4. Technology Stack
 
-Ensure you have the following installed locally:
-- **Node.js**: v18.0.0 or later (v22.17.0 tested)
-- **npm**: v9.0.0 or later (v11.4.2 tested)
-- **Python**: v3.10 or later (v3.12.4 tested)
-- **AWS CLI v2**: For subsequent cloud deployment phases
-- **Git**
+- **Frontend Application**:
+  - React 19 + Vite SPA architecture
+  - React Router v7 with SPA 404-fallback routing
+  - Lucide React iconography
+  - Custom Vanilla CSS Design System (Clean, calm financial operations interface; Inter & Outfit typography; zero generic dark glassmorphism)
+- **Backend & Cloud Infrastructure (Serverless Microservices)**:
+  - Python 3.12 AWS Lambda functions
+  - Amazon API Gateway (REST API with Cognito User Pool Authorizer & CORS preflight)
+  - Amazon Cognito User Pools (Multi-tenant tenant isolation & refresh token auth)
+  - Amazon S3 (Document lake with short-lived presigned URLs & SSE-S3 AES-256)
+  - Amazon Textract (`AnalyzeExpense` API)
+  - Amazon Rekognition (`DetectText` OCR fallback)
+  - Amazon DynamoDB (Pay-per-request On-Demand billing, Global Secondary Index)
+  - Amazon CloudWatch (Metric filters for `DocumentProcessingErrors`, alarms, and operational dashboard)
+- **Quality Assurance & Testing**:
+  - Backend: Pytest (36 automated unit and end-to-end pipeline tests)
+  - Frontend: Node.js Test Runner (18 unit tests for auth, uploads, and API integration)
 
 ---
 
-## 7. Setup & Running Locally
+## 5. Repository Directory Layout
 
-### Step 1: Clone or Navigate to the Workspace
-```powershell
-cd "c:\Users\arshd\OneDrive - vit.ac.in\Desktop\cloud_project"
+```
+cloud_project/
+├── frontend/
+│   ├── public/               # Static assets & favicon
+│   ├── src/
+│   │   ├── components/       # Reusable components (Sidebar, Header, MetricsCards, UploadModal)
+│   │   ├── context/          # AuthContext with automated token refresh & guest fallback
+│   │   ├── hooks/            # useDocuments data fetching & mutation hook
+│   │   ├── pages/            # DashboardPage, DocumentsPage, DocumentReviewPage, SettingsPage
+│   │   ├── services/         # authService (Cognito SDK), api.js (Gateway client), uploadService
+│   │   ├── utils/            # exportUtils (CSV/JSON), constants, formatters
+│   │   ├── App.jsx           # App shell with responsive navigation
+│   │   ├── main.jsx          # Root React entry point
+│   │   └── index.css         # Financial design tokens, layout grids, typography
+│   ├── package.json
+│   └── vite.config.js
+├── backend/
+│   ├── shared/               # Shared response utils, CORS, Decimal encoder, document_extractor
+│   ├── functions/
+│   │   ├── create-upload/    # S3 presigned PUT URL generator
+│   │   ├── process-document/ # Multi-tier Textract & Rekognition OCR extraction engine
+│   │   ├── get-document/     # Document retrieval with presigned GET view URLs
+│   │   ├── list-documents/   # DynamoDB GSI user query & financial status aggregation
+│   │   └── save-corrections/ # Immutability-preserving human corrections writer
+│   ├── tests/                # 36 Pytest unit and pipeline tests
+│   └── requirements.txt      # Python dependencies
+├── infrastructure/           # CloudFormation / serverless resource definitions & architecture specs
+├── docs/                     # Architecture documentation and presentation runbooks
+│   ├── architecture.md       # High-level architecture, state machines, and data schemas
+│   ├── implementation-plan.md# Engineering specifications
+│   └── college-presentation-guide.md # Architecture defense talking points & evaluator Q&A
+├── scripts/                  # Cloud deployment automation scripts
+│   ├── deploy_lambdas.py
+│   ├── deploy_milestone8_hosting.py # Production S3 static website builder & deployer
+│   └── run_local_backend.py
+└── README.md
 ```
 
-### Step 2: Install Frontend Dependencies
+---
+
+## 6. Local Development & Setup
+
+### Prerequisites
+- **Node.js**: v18.0.0 or later (v22 tested)
+- **npm**: v9.0.0 or later
+- **Python**: v3.10 or later (v3.12 tested)
+- **AWS CLI v2**: Configured with appropriate AWS credentials
+
+### Step 1: Install Frontend Dependencies
 ```powershell
 cd frontend
 npm install
 ```
 
-### Step 3: Run the Frontend Development Server
+### Step 2: Start Development Server
 ```powershell
 npm run dev
 ```
-The application will start locally at **`http://localhost:5173`**. Open this URL in any modern browser.
+The application will launch locally at **`http://localhost:5173`**.
 
-### Step 4: Run Automated Tests
+### Step 3: Run Automated Test Suites
 ```powershell
-# Run full backend test suite (36 tests passing: S3, DynamoDB, Textract & End-to-End Pipeline)
+# 1. Run full backend test suite (36 tests: S3, DynamoDB, Textract & End-to-End Pipeline)
 pytest backend/tests/ -v
 
-# Run frontend test suite (18 tests passing: Auth, Upload & API Gateway integration)
+# 2. Run frontend test suite (18 tests: Auth, Uploads, API Gateway client)
 cd frontend
 npm test
 ```
 
-### Academic & College Presentation Guide
-A full evaluation runbook, architecture defense talking points, evaluator Q&A script, and live demonstration guide are available in [`docs/college-presentation-guide.md`](docs/college-presentation-guide.md).
-
-### Step 5: Test Real S3 Uploads Locally via Local Lambda Bridge
-```powershell
-# 1. Set your bucket name and region
-$env:DOCUMENTS_BUCKET_NAME="your-s3-bucket-name"
-$env:AWS_REGION="us-east-1"
-
-# 2. Start the local Lambda HTTP bridge
-python scripts/run_local_backend.py
-
-# 3. In frontend/.env, configure the endpoint:
-# VITE_UPLOAD_API_URL=http://localhost:8000/documents/upload-url
-
-# 4. Start frontend and upload documents from http://localhost:5173
-cd frontend
-npm run dev
-```
-
-### Step 6: Validate Production Build
-To ensure that all components and CSS compile with zero warnings or errors:
+### Step 4: Build Production Bundle
 ```powershell
 cd frontend
 npm run build
 ```
 
+### Step 5: Deploy to AWS S3 Static Website Hosting
+```powershell
+python scripts/deploy_milestone8_hosting.py
+```
+
 ---
 
-## 8. AWS Security & Cost Principles
+## 7. AWS Security & Cost Optimization
 
-1. **Zero Secret Ingestion**: AWS access keys, passwords, and tokens are never embedded into frontend source code.
-2. **Private S3 Buckets**: Public access block is strictly enabled. Client downloads and uploads use short-lived presigned URLs.
-3. **Pay-Per-Request Serverless**: Zero fixed costs when idle; uses Lambda, S3, DynamoDB On-Demand, and API Gateway.
-4. **Data Immutability Guard**: Original extraction snapshots from Textract are permanently stored in `rawExtraction` and never modified when users edit corrections.
+1. **Zero Secret Ingestion**: No AWS access keys, secrets, or administrative credentials exist in frontend client code. All AWS interactions are arbitrated via short-lived Cognito JWTs or signed URLs.
+2. **Least Privilege IAM**: Lambda execution roles are scoped strictly to their respective resources (e.g. `s3:GetObject` on `doc-intelligence-uploads-*/*`, `dynamodb:PutItem` on `doc-intelligence-documents`).
+3. **Multi-Tenant User Isolation**: Every DynamoDB query strictly enforces the authenticated user's Cognito `sub` identifier as the partition key. Users cannot read or modify documents belonging to another tenant.
+4. **100% Free-Tier Eligible Serverless Architecture**:
+   - **AWS Lambda**: 1M free requests/month
+   - **Amazon API Gateway**: 1M free calls/month (HTTP/REST)
+   - **Amazon S3**: 5 GB storage + 20,000 GET requests/month
+   - **Amazon DynamoDB**: 25 GB free storage + 25 WCU / 25 RCU On-Demand
+   - **Amazon Rekognition**: 5,000 free image analyses/month
+   - **Amazon Cognito**: 50,000 free monthly active users (MAUs)
+   - **Zero Idle Costs**: When no documents are being processed, cloud billing is exactly $0.00.
