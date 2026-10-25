@@ -10,10 +10,10 @@ export default function Header({ onSearch, onOpenUpload }) {
   const { user, isAuthenticated, openAuthModal, signOut } = useAuth();
   const [searchValue, setSearchValue] = useState('');
 
-  // Extract initials
+  // Extract initials if authenticated
   const userInitial = user?.email 
     ? user.email.slice(0, 2).toUpperCase() 
-    : 'AP';
+    : null;
 
   // Compute breadcrumb
   const getBreadcrumbs = () => {
@@ -126,7 +126,11 @@ export default function Header({ onSearch, onOpenUpload }) {
           title={isAuthenticated ? `Signed in as ${user.email} (Click to sign out)` : 'Sign In / Register'}
           aria-label="User account"
         >
-          <span className="header-avatar-initials">{userInitial}</span>
+          {isAuthenticated ? (
+            <span className="header-avatar-initials">{userInitial}</span>
+          ) : (
+            <User size={15} />
+          )}
         </button>
       </div>
     </header>

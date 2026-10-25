@@ -14,14 +14,14 @@ import './Sidebar.css';
 export default function Sidebar({ metrics = { total: 0, pendingReview: 0 } }) {
   const { user, isAuthenticated, openAuthModal, signOut } = useAuth();
 
-  // Extract initials and display name
+  // Extract initials and display name when authenticated
   const displayName = user?.email 
     ? user.email.split('@')[0] 
-    : 'Arshdeep Pasricha';
+    : 'Sign In';
 
   const userInitial = user?.email 
     ? user.email.slice(0, 2).toUpperCase() 
-    : 'AP';
+    : null;
 
   return (
     <aside className="app-sidebar" id="app-sidebar">
@@ -114,14 +114,14 @@ export default function Sidebar({ metrics = { total: 0, pendingReview: 0 } }) {
             title={isAuthenticated ? `Signed in as ${user.email} (Click to sign out)` : 'Sign in to workspace'}
           >
             <div className="user-avatar-circle">
-              {userInitial}
+              {isAuthenticated ? userInitial : <LogIn size={13} />}
             </div>
             <div className="user-text-info">
-              <span className="user-display-name" title={user?.email || displayName}>
+              <span className="user-display-name" title={isAuthenticated ? user?.email : 'Sign in to your account'}>
                 {displayName}
               </span>
               <span className="user-workspace-label">
-                {isAuthenticated ? 'Cognito verified' : 'Personal workspace'}
+                {isAuthenticated ? 'Cognito verified' : 'Access workspace'}
               </span>
             </div>
             <div className="user-action-icon">

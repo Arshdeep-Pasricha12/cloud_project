@@ -82,3 +82,7 @@ coverage.xml
 Thumbs.db
 desktop.ini
 $RECYCLE.BIN/
+
+# Local test scratch
+docintel_test_corpus/
+
