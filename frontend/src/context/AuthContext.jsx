@@ -10,18 +10,23 @@ export function AuthProvider({ children }) {
   const [authModalTab, setAuthModalTab] = useState('signin'); // 'signin' | 'signup' | 'confirm'
   const [pendingEmail, setPendingEmail] = useState('');
 
-  // Check stored session on mount
+  // Check stored session on mount and ensure token is fresh
   useEffect(() => {
-    try {
-      const currentUser = authService.getCurrentUser();
-      if (currentUser) {
-        setUser(currentUser);
+    async function restoreSession() {
+      try {
+        const currentUser = authService.getCurrentUser();
+        if (currentUser) {
+          setUser(currentUser);
+          // Refresh expired tokens transparently using refresh token
+          await authService.getValidIdToken();
+        }
+      } catch (e) {
+        console.warn('Failed to restore auth session:', e);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (e) {
-      console.warn('Failed to restore auth session:', e);
-    } finally {
-      setIsLoading(false);
     }
+    restoreSession();
   }, []);
 
   const openAuthModal = (tab = 'signin', email = '') => {

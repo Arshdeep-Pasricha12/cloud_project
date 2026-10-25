@@ -12,10 +12,13 @@ import {
   Inbox,
   Clock,
   Sparkles,
-  Upload
+  Upload,
+  Download,
+  AlertTriangle
 } from 'lucide-react';
 import { apiService } from '../services/api';
 import { formatBytes, formatDate, formatCurrency } from '../utils/formatters';
+import { exportInvoiceToJson } from '../utils/exportUtils';
 import StatusBadge from '../components/StatusBadge';
 import './DocumentReviewPage.css';
 
@@ -295,6 +298,45 @@ export default function DocumentReviewPage({
     };
   }, [confidenceMap]);
 
+  // Automated Financial Math & Arithmetic Discrepancy Audit
+  const arithmeticAudit = useMemo(() => {
+    const sub = parseFloat(formData.subtotal);
+    const tax = parseFloat(formData.taxAmount);
+    const tot = parseFloat(formData.totalAmount);
+
+    if (!isNaN(sub) && !isNaN(tot)) {
+      const calculatedTotal = Math.round((sub + (isNaN(tax) ? 0 : tax)) * 100) / 100;
+      const discrepancy = Math.round(Math.abs(calculatedTotal - tot) * 100) / 100;
+      if (discrepancy > 0.05) {
+        return {
+          hasMismatch: true,
+          calculatedTotal,
+          discrepancy,
+          message: `Arithmetic check failed: Subtotal (${formatCurrency(sub, formData.currency)}) + Tax (${formatCurrency(tax || 0, formData.currency)}) = ${formatCurrency(calculatedTotal, formData.currency)}, but Total is ${formatCurrency(tot, formData.currency)}. Discrepancy of ${formatCurrency(discrepancy, formData.currency)}.`
+        };
+      }
+    }
+    return { hasMismatch: false };
+  }, [formData.subtotal, formData.taxAmount, formData.totalAmount, formData.currency]);
+
+  // Potential Duplicate Invoice Detection
+  const duplicateWarning = useMemo(() => {
+    if (!formData.vendorName || !formData.invoiceNumber) return null;
+    const normVendor = formData.vendorName.trim().toLowerCase();
+    const normInv = formData.invoiceNumber.trim().toLowerCase();
+
+    const dup = documents.find(
+      (d) =>
+        d.documentId !== id &&
+        (d.vendor || '').trim().toLowerCase() === normVendor &&
+        (d.invoiceNumber || '').trim().toLowerCase() === normInv
+    );
+    if (dup) {
+      return `Potential duplicate detected: Document "${dup.fileName}" already has Invoice #${formData.invoiceNumber} from ${formData.vendorName}.`;
+    }
+    return null;
+  }, [formData.vendorName, formData.invoiceNumber, documents, id]);
+
   // =========================================================================
   // VIEW 1: REVIEW QUEUE VIEW (When user visits /review without specific ID)
   // =========================================================================
@@ -504,15 +546,34 @@ export default function DocumentReviewPage({
   }
 
   if (loadError) {
+    const isAuthErr = loadError.toLowerCase().includes('unauthorized') || loadError.includes('401');
     return (
       <div className="review-error-card">
         <AlertCircle size={28} className="error-icon" />
-        <h3 className="error-title">Unable to open document</h3>
-        <p className="error-desc">{loadError}</p>
-        <Link to="/review" className="btn btn-secondary btn-sm">
-          <ArrowLeft size={14} />
-          <span>Back to review queue</span>
-        </Link>
+        <h3 className="error-title">{isAuthErr ? 'Workspace Session Required' : 'Unable to open document'}</h3>
+        <p className="error-desc">
+          {isAuthErr
+            ? 'You need to be signed in to your workspace account to view and review this document.'
+            : loadError}
+        </p>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          {isAuthErr && (
+            <button 
+              type="button" 
+              className="btn btn-primary btn-sm"
+              onClick={() => {
+                const btn = document.querySelector('#btn-open-auth-modal') || document.querySelector('.user-workspace-btn');
+                if (btn) btn.click();
+              }}
+            >
+              Sign in to workspace
+            </button>
+          )}
+          <Link to="/review" className="btn btn-secondary btn-sm">
+            <ArrowLeft size={14} />
+            <span>Back to review queue</span>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -580,6 +641,17 @@ export default function DocumentReviewPage({
               <ExternalLink size={13} />
             </button>
           )}
+
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => exportInvoiceToJson(document, formData, lineItems)}
+            title="Export verified ERP payload as JSON"
+            id="btn-export-erp-json"
+          >
+            <Download size={13} />
+            <span>Export ERP JSON</span>
+          </button>
 
           <button
             type="button"
@@ -779,6 +851,32 @@ export default function DocumentReviewPage({
               <div className="alert-content">
                 <strong className="alert-strong">A couple of details need a quick check</strong>
                 <span className="alert-text">One or more fields had lower optical confidence. Please confirm.</span>
+              </div>
+            </div>
+          )}
+
+          {/* Real-World Financial Math Discrepancy Banner */}
+          {arithmeticAudit.hasMismatch && (
+            <div className="fields-alert-banner alert-math-mismatch" id="math-discrepancy-banner">
+              <div className="alert-amber-box">
+                <AlertTriangle size={14} />
+              </div>
+              <div className="alert-content">
+                <strong className="alert-strong">Arithmetic Discrepancy Detected</strong>
+                <span className="alert-text">{arithmeticAudit.message}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Potential Duplicate Invoice Banner */}
+          {duplicateWarning && (
+            <div className="fields-alert-banner alert-duplicate-mismatch" id="duplicate-invoice-banner">
+              <div className="alert-amber-box">
+                <AlertCircle size={14} />
+              </div>
+              <div className="alert-content">
+                <strong className="alert-strong">Duplicate Invoice Warning</strong>
+                <span className="alert-text">{duplicateWarning}</span>
               </div>
             </div>
           )}

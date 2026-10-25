@@ -24,18 +24,33 @@ const getEnvVar = (key) => {
 const API_BASE_URL = getEnvVar('VITE_API_BASE_URL') || '';
 const AWS_REGION = getEnvVar('VITE_AWS_REGION') || '';
 
-const getAuthHeaders = () => {
-  const headers = { 'Content-Type': 'application/json' };
-  try {
-    const token = authService.getIdToken();
-    if (token) {
-      headers['Authorization'] = token;
-    }
-  } catch (e) {
-    // continue unauthenticated if token not available
+async function fetchWithAuth(url, options = {}) {
+  const token = await authService.getValidIdToken();
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(options.headers || {})
+  };
+  if (token) {
+    headers['Authorization'] = token;
   }
-  return headers;
-};
+
+  let response = await fetch(url, { ...options, headers });
+
+  // If 401 Unauthorized, attempt a session refresh and retry once
+  if (response.status === 401) {
+    try {
+      const refreshedToken = await authService.refreshSession();
+      if (refreshedToken) {
+        headers['Authorization'] = refreshedToken;
+        response = await fetch(url, { ...options, headers });
+      }
+    } catch {
+      // Continue with original 401 response
+    }
+  }
+
+  return response;
+}
 
 export const apiService = {
   isConfigured() {
@@ -78,9 +93,8 @@ export const apiService = {
         metrics: { total: 0, processing: 0, pendingReview: 0, reviewed: 0 }
       };
     }
-    const response = await fetch(`${API_BASE_URL}/documents`, {
-      method: 'GET',
-      headers: getAuthHeaders()
+    const response = await fetchWithAuth(`${API_BASE_URL}/documents`, {
+      method: 'GET'
     });
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
@@ -97,9 +111,8 @@ export const apiService = {
     if (!this.isConfigured()) {
       return null;
     }
-    const response = await fetch(`${API_BASE_URL}/documents/${documentId}`, {
-      method: 'GET',
-      headers: getAuthHeaders()
+    const response = await fetchWithAuth(`${API_BASE_URL}/documents/${documentId}`, {
+      method: 'GET'
     });
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
@@ -115,9 +128,8 @@ export const apiService = {
     if (!this.isConfigured()) {
       throw new Error('API Gateway base URL is not configured.');
     }
-    const response = await fetch(`${API_BASE_URL}/documents/${documentId}/corrections`, {
+    const response = await fetchWithAuth(`${API_BASE_URL}/documents/${documentId}/corrections`, {
       method: 'PUT',
-      headers: getAuthHeaders(),
       body: JSON.stringify({ corrections })
     });
     if (!response.ok) {

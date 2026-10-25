@@ -534,6 +534,31 @@
   color: #7A4B08;
 }
 
+.alert-math-mismatch {
+  background-color: #FEF7EE;
+  border-color: #F8D7A4;
+  margin-bottom: 12px;
+}
+
+.alert-duplicate-mismatch {
+  background-color: #FDF2F2;
+  border-color: #F8C8C8;
+  margin-bottom: 12px;
+}
+
+.alert-duplicate-mismatch .alert-amber-box {
+  background-color: #DE350B;
+  color: #FFFFFF;
+}
+
+.alert-duplicate-mismatch .alert-strong {
+  color: #BF2600;
+}
+
+.alert-duplicate-mismatch .alert-text {
+  color: #972000;
+}
+
 /* Form Styles */
 .invoice-edit-form {
   display: flex;

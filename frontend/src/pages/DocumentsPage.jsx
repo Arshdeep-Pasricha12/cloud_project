@@ -2,14 +2,21 @@ import React, { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import DocumentsTable from '../components/DocumentsTable';
 import { useDocuments } from '../hooks/useDocuments';
+import { useAuth } from '../context/AuthContext';
+import { exportDocumentsToCsv } from '../utils/exportUtils';
 import { 
   Plus, 
   Search, 
   Filter, 
   ChevronDown,
   CheckCircle2,
-  Calendar
+  Calendar,
+  Download,
+  LogIn,
+  DollarSign,
+  TrendingUp
 } from 'lucide-react';
+import { formatCurrency } from '../utils/formatters';
 import './DocumentsPage.css';
 
 export default function DocumentsPage({ 
@@ -25,12 +32,22 @@ export default function DocumentsPage({
   const isLoading = propLoading ?? fallback.isLoading;
   const refreshDocuments = propRefresh ?? fallback.refreshDocuments;
 
+  const { isAuthenticated, openAuthModal } = useAuth();
+
   const [searchParams] = useSearchParams();
   const initialSearch = searchParams.get('search') || '';
 
   const [searchTerm, setSearchTerm] = useState(initialSearch);
   const [statusTab, setStatusTab] = useState('ALL'); // ALL | PENDING_REVIEW | PROCESSING | REVIEWED | FAILED
   const [vendorFilter, setVendorFilter] = useState('ALL');
+
+  // Total spend calculation for real-world financial KPI
+  const totalSpend = useMemo(() => {
+    return documents.reduce((sum, d) => {
+      const val = parseFloat(d.totalAmount ?? d.rawExtraction?.summaryFields?.totalAmount?.value) || 0;
+      return sum + val;
+    }, 0);
+  }, [documents]);
 
   // Extract unique vendors for filter dropdown
   const uniqueVendors = useMemo(() => {
@@ -98,16 +115,46 @@ export default function DocumentsPage({
           <h1 className="page-title">Documents</h1>
           <p className="page-subtitle">All your invoices and receipts in one place.</p>
         </div>
-        <button
-          type="button"
-          className="btn btn-primary"
-          id="btn-documents-upload"
-          onClick={onOpenUpload}
-        >
-          <Plus size={15} />
-          <span>Upload document</span>
-        </button>
+        <div className="documents-header-actions-group">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            id="btn-documents-export-csv"
+            onClick={() => exportDocumentsToCsv(filteredDocuments)}
+            title="Download CSV report of documents"
+          >
+            <Download size={14} />
+            <span>Export CSV</span>
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            id="btn-documents-upload"
+            onClick={onOpenUpload}
+          >
+            <Plus size={15} />
+            <span>Upload document</span>
+          </button>
+        </div>
       </div>
+
+      {/* Unauthenticated Workspace Session Banner */}
+      {!isAuthenticated && (
+        <div className="documents-auth-notice" id="documents-auth-notice">
+          <div className="auth-notice-text">
+            <strong>Workspace Session Notice:</strong> You are currently viewing in guest mode. Sign in to your verified account (arshdeepforwork@gmail.com) to access all cloud invoices and your review queue.
+          </div>
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={() => openAuthModal('signin')}
+            id="btn-documents-signin"
+          >
+            <LogIn size={13} />
+            <span>Sign In</span>
+          </button>
+        </div>
+      )}
 
       {/* Main Working Panel */}
       <div className="documents-working-card">

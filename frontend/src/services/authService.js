@@ -191,27 +191,69 @@ export const authService = {
   },
 
   /**
-   * Retrieve current stored user profile if token is not expired.
+   * Refresh current Cognito session using the stored refresh token.
+   * Enables persistent login across browser reloads without re-entering credentials.
+   */
+  async refreshSession() {
+    if (typeof localStorage === 'undefined') return null;
+    const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+    if (!refreshToken) return null;
+
+    try {
+      const payload = {
+        AuthFlow: 'REFRESH_TOKEN_AUTH',
+        ClientId: CLIENT_ID,
+        AuthParameters: {
+          REFRESH_TOKEN: refreshToken
+        }
+      };
+
+      const result = await callCognito('InitiateAuth', payload);
+      const authResult = result.AuthenticationResult;
+
+      if (authResult && authResult.IdToken) {
+        localStorage.setItem(STORAGE_KEYS.ID_TOKEN, authResult.IdToken);
+        if (authResult.AccessToken) {
+          localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, authResult.AccessToken);
+        }
+        return authResult.IdToken;
+      }
+    } catch (err) {
+      console.warn('Automatic session refresh failed:', err);
+      // Only sign out if refresh token itself was revoked/invalid
+      if (err.code === 'NotAuthorizedException') {
+        this.signOut();
+      }
+    }
+    return null;
+  },
+
+  /**
+   * Retrieve current stored user profile.
    */
   getCurrentUser() {
     if (typeof localStorage === 'undefined') return null;
 
     const idToken = localStorage.getItem(STORAGE_KEYS.ID_TOKEN);
     const userJson = localStorage.getItem(STORAGE_KEYS.USER_DATA);
+    const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
 
     if (!idToken || !userJson) return null;
 
     const claims = decodeJwt(idToken);
     if (!claims || !claims.exp) {
-      this.signOut();
+      if (!refreshToken) this.signOut();
       return null;
     }
 
     // Check token expiration (exp is in seconds)
     const nowSeconds = Math.floor(Date.now() / 1000);
     if (claims.exp < nowSeconds) {
-      this.signOut();
-      return null;
+      // If no refresh token exists, auto-clean expired session
+      if (!refreshToken) {
+        this.signOut();
+        return null;
+      }
     }
 
     try {
@@ -226,14 +268,26 @@ export const authService = {
    */
   getIdToken() {
     if (typeof localStorage === 'undefined') return null;
+    return localStorage.getItem(STORAGE_KEYS.ID_TOKEN);
+  },
+
+  /**
+   * Async getter ensuring a valid (non-expired) ID token, refreshing automatically if needed.
+   */
+  async getValidIdToken() {
+    if (typeof localStorage === 'undefined') return null;
     const token = localStorage.getItem(STORAGE_KEYS.ID_TOKEN);
     if (!token) return null;
 
     const claims = decodeJwt(token);
-    if (claims && claims.exp && claims.exp < Math.floor(Date.now() / 1000)) {
-      this.signOut();
-      return null;
+    const nowSeconds = Math.floor(Date.now() / 1000);
+
+    // Refresh if token is expired or within 60 seconds of expiring
+    if (!claims || !claims.exp || claims.exp <= nowSeconds + 60) {
+      const refreshed = await this.refreshSession();
+      if (refreshed) return refreshed;
     }
+
     return token;
   }
 };

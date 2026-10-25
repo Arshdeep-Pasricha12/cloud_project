@@ -12,7 +12,37 @@
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
+  gap: 16px;
+}
+
+.documents-header-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Auth Notice Banner */
+.documents-auth-notice {
+  background-color: #F8FAF7;
+  border: 1px solid #D6E2D5;
+  border-radius: var(--radius-md);
+  padding: 12px 18px;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.auth-notice-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.auth-notice-text strong {
+  color: var(--text-primary);
 }
 
 /* Main Working Card */

@@ -28,7 +28,11 @@ if backend_dir not in sys.path:
 import boto3
 from botocore.exceptions import ClientError
 
-from shared.document_extractor import extract_from_pdf_stream, extract_from_image_fallback
+from shared.document_extractor import (
+    extract_from_pdf_stream, 
+    extract_from_image_fallback,
+    extract_from_rekognition_detections
+)
 from shared.models import DocumentStatus
 from shared.response_utils import build_response
 from shared.textract_parser import normalize_textract_expense
@@ -121,16 +125,22 @@ def process_invoice_document(bucket: str, key: str, region_name: str) -> Dict[st
         )
         return normalize_textract_expense(response)
     except Exception as err:
-        logger.warning(f"Textract unavailable ({type(err).__name__}: {str(err)}). Engaging intelligent fallback extractor.")
-        s3 = boto3.client("s3", region_name=region_name)
-        obj = s3.get_object(Bucket=bucket, Key=key)
-        body_bytes = obj["Body"].read()
-
+        logger.warning(f"Textract unavailable ({type(err).__name__}: {str(err)}). Engaging AWS Rekognition / Lambda fallback.")
         lower_key = key.lower()
         if lower_key.endswith(".pdf"):
+            s3 = boto3.client("s3", region_name=region_name)
+            obj = s3.get_object(Bucket=bucket, Key=key)
+            body_bytes = obj["Body"].read()
             return extract_from_pdf_stream(body_bytes, filename=key)
         else:
-            return extract_from_image_fallback(filename=key, s3_key=key)
+            # Native AWS Rekognition OCR fallback for image documents and receipts
+            try:
+                rek = boto3.client("rekognition", region_name=region_name)
+                rek_res = rek.detect_text(Image={"S3Object": {"Bucket": bucket, "Name": key}})
+                return extract_from_rekognition_detections(rek_res.get("TextDetections", []), filename=key)
+            except Exception as rek_err:
+                logger.warning(f"Rekognition fallback failed ({type(rek_err).__name__}: {str(rek_err)}). Using heuristic fallback.")
+                return extract_from_image_fallback(filename=key, s3_key=key)
 
 
 def lambda_handler(event: Dict[str, Any], context: Any = None) -> Dict[str, Any]:
