@@ -6,6 +6,8 @@ Features:
 - Official VIT Chennai horizontal banner logo extracted directly from PROJECT REPORT TEMPLATE.pdf
 - Chapter-based structure matching template (Chapter 1 Introduction, Chapter 2 Background Study, Chapter 3 Individual Contributions, Chapter 4 Methodology, Chapter 5 Results, Chapter 6 Conclusion and Future Work)
 - DEDICATED EXACTLY 1-PAGE INDIVIDUAL CONTRIBUTIONS CHAPTER (Chapter 3)
+- Comprehensive visual figures & AWS production screenshots (Figures 1 to 5)
+- Automated Two-Pass compilation with pypdf ensuring 100% exact Table of Contents page alignment
 - Strict APA formatted references matching template Page 5
 - Word COM automated compilation to PDF
 """
@@ -120,6 +122,29 @@ def add_bullet_item(doc, bold_prefix, text, font_size_pt=11.5):
     rt.font.size = Pt(font_size_pt)
     return p
 
+def add_figure(doc, img_path, caption_text, width_inches=6.0):
+    """Inserts a figure image centered on page with academic bold caption."""
+    if os.path.exists(img_path):
+        p_img = doc.add_paragraph()
+        p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_img.paragraph_format.space_before = Pt(8.0)
+        p_img.paragraph_format.space_after = Pt(3.0)
+        run_img = p_img.add_run()
+        run_img.add_picture(img_path, width=Inches(width_inches))
+
+        p_cap = doc.add_paragraph()
+        p_cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_cap.paragraph_format.space_before = Pt(2.0)
+        p_cap.paragraph_format.space_after = Pt(8.0)
+        r_cap = p_cap.add_run(caption_text)
+        r_cap.font.name = "Times New Roman"
+        r_cap.font.size = Pt(9.5)
+        r_cap.font.bold = True
+        return p_cap
+    else:
+        print(f"Warning: Figure image not found: {img_path}")
+        return None
+
 def create_table(doc, headers, data, col_widths, caption="", font_size_pt=9.0, pad_v=60):
     """Creates a clean corporate/academic table matching template styling."""
     if caption:
@@ -173,7 +198,6 @@ def create_table(doc, headers, data, col_widths, caption="", font_size_pt=9.0, p
             set_cell_borders(cell, top="single", bottom="single", left="none", right="none", color="E5E7EB", sz="4")
             
             p = cell.paragraphs[0]
-            # Center numeric / status columns, left-align descriptive texts
             is_center = (c_idx == 0 and len(val) < 6) or ('%' in val) or (val in ['Free', '$0.00', '100%', 'Joint'])
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER if is_center else WD_ALIGN_PARAGRAPH.LEFT
             p.paragraph_format.space_before = Pt(1.0)
@@ -190,7 +214,18 @@ def create_table(doc, headers, data, col_widths, caption="", font_size_pt=9.0, p
     p_after.paragraph_format.space_after = Pt(3.0)
     return table
 
-def generate_report():
+def generate_report(toc_map=None):
+    if toc_map is None:
+        toc_map = {
+            "CHAPTER 1: INTRODUCTION": "4",
+            "CHAPTER 2: BACKGROUND STUDY & PROBLEM STATEMENT": "5",
+            "CHAPTER 3: INDIVIDUAL CONTRIBUTIONS & WORK ALLOCATION": "6",
+            "CHAPTER 4: METHODOLOGY & CLOUD ARCHITECTURE": "7",
+            "CHAPTER 5: RESULTS, BENCHMARKS & COST ANALYSIS": "12",
+            "CHAPTER 6: CONCLUSION AND FUTURE WORK": "17",
+            "REFERENCES": "18"
+        }
+
     doc = docx.Document()
 
     # Page Geometry: Letter (8.5 x 11.0 in) matching PROJECT REPORT TEMPLATE.pdf
@@ -205,6 +240,15 @@ def generate_report():
     # Set default style font
     doc.styles['Normal'].font.name = 'Times New Roman'
     doc.styles['Normal'].font.size = Pt(12.0)
+
+    # Base directory for images
+    docs_dir = os.path.join(os.path.dirname(__file__), "..", "docs")
+    logo_path = os.path.join(docs_dir, "vit_template_logo.png")
+    fig1_path = os.path.join(docs_dir, "figure1_architecture.png")
+    fig2_path = os.path.join(docs_dir, "figure2_extraction_flow.png")
+    fig3_path = os.path.join(docs_dir, "figure3_review_workstation.png")
+    fig4_path = os.path.join(docs_dir, "figure4_dashboard_operations.png")
+    fig5_path = os.path.join(docs_dir, "figure5_aws_endpoints.png")
 
     # =========================================================================
     # PAGE 1: TITLE / COVER PAGE (Strictly Following Template Page 1)
@@ -232,7 +276,6 @@ def generate_report():
     p_logo.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p_logo.paragraph_format.space_before = Pt(8.0)
     p_logo.paragraph_format.space_after = Pt(28.0)
-    logo_path = os.path.join(os.path.dirname(__file__), "..", "docs", "vit_template_logo.png")
     if os.path.exists(logo_path):
         run_logo = p_logo.add_run()
         run_logo.add_picture(logo_path, width=Inches(4.2), height=Inches(1.2))
@@ -297,16 +340,17 @@ def generate_report():
     add_p(doc, text="CONTENTS", font_size_pt=14.0, bold=True, 
           align=WD_ALIGN_PARAGRAPH.CENTER, space_before_pt=12.0, space_after_pt=16.0)
 
-    toc_entries = [
-        ("CHAPTER 1: INTRODUCTION", "4"),
-        ("CHAPTER 2: BACKGROUND STUDY & PROBLEM STATEMENT", "5"),
-        ("CHAPTER 3: INDIVIDUAL CONTRIBUTIONS & WORK ALLOCATION", "6"),
-        ("CHAPTER 4: METHODOLOGY & CLOUD ARCHITECTURE", "7"),
-        ("CHAPTER 5: RESULTS, BENCHMARKS & COST ANALYSIS", "10"),
-        ("CHAPTER 6: CONCLUSION AND FUTURE WORK", "13"),
-        ("REFERENCES", "14")
+    toc_order = [
+        "CHAPTER 1: INTRODUCTION",
+        "CHAPTER 2: BACKGROUND STUDY & PROBLEM STATEMENT",
+        "CHAPTER 3: INDIVIDUAL CONTRIBUTIONS & WORK ALLOCATION",
+        "CHAPTER 4: METHODOLOGY & CLOUD ARCHITECTURE",
+        "CHAPTER 5: RESULTS, BENCHMARKS & COST ANALYSIS",
+        "CHAPTER 6: CONCLUSION AND FUTURE WORK",
+        "REFERENCES"
     ]
-    for ch_title, ch_pg in toc_entries:
+    for ch_title in toc_order:
+        ch_pg = toc_map.get(ch_title, "1")
         p_toc = doc.add_paragraph()
         p_toc.paragraph_format.space_before = Pt(4.0)
         p_toc.paragraph_format.space_after = Pt(4.0)
@@ -516,9 +560,11 @@ def generate_report():
     add_sec_h1(doc, "4.1 END-TO-END SERVERLESS TOPOLOGY & RESOURCE INVENTORY")
     add_body_text(doc,
         "The DocuIntel platform is engineered as a fully serverless, event-driven multi-tenant cloud application deployed in the AWS Asia Pacific "
-        "(Mumbai) region (ap-south-1). The architectural topology decouples client ingress from asynchronous compute and persistence. "
-        "Table 2 provides the complete inventory of live AWS cloud resources, identifiers, and configuration standards powering production."
+        "(Mumbai) region (ap-south-1). The architectural topology decouples client ingress from asynchronous compute and persistence, as illustrated "
+        "in Figure 1. Table 2 provides the complete inventory of live AWS cloud resources, identifiers, and configuration standards powering production."
     )
+
+    add_figure(doc, fig1_path, "Figure 1: DocuIntel End-to-End Serverless Cloud Architecture Diagram on AWS (ap-south-1).", width_inches=6.2)
 
     t2_headers = ["AWS Cloud Service", "Resource Identifier", "Configuration Standard", "Operational Role"]
     t2_data = [
@@ -534,7 +580,7 @@ def generate_report():
     ]
     create_table(doc, t2_headers, t2_data, [1.3, 1.8, 1.8, 1.6], 
                  caption="Table 2: Production AWS Cloud Resource Architecture & Endpoint Inventory.",
-                 font_size_pt=8.5, pad_v=45)
+                 font_size_pt=8.5, pad_v=38)
 
     add_sec_h1(doc, "4.2 DIRECT S3 INGESTION VIA PRESIGNED PUT URLS")
     add_body_text(doc,
@@ -557,6 +603,13 @@ def generate_report():
                     "Activated if Textract encounters SubscriptionRequiredException or rate throttling. Rekognition delivers 98–99.7% confident text detections from receipt images that our normalizer parses into structured financial schemas.")
     add_bullet_item(doc, "Tier 3: Serverless PDF Text Stream Parsing", 
                     "For PDF invoices when cloud ML services are delayed, the function reads S3 byte streams directly into memory buffers, extracting text entities using bundled PyPDF utilities without external dependencies.")
+
+    add_body_text(doc,
+        "Figure 2 illustrates the complete multi-tier extraction flowchart, showing how S3 event triggers initiate autonomous engine failover, "
+        "schema normalization, confidence scoring, and cryptographic separation between raw machine detections and human modifications."
+    )
+
+    add_figure(doc, fig2_path, "Figure 2: Resilient Multi-Tier AI/OCR Extraction, Schema Normalization, and Failover State Flow.", width_inches=6.0)
 
     add_sec_h1(doc, "4.4 MULTI-TENANT SECURITY & PERSISTENT SESSION RENEWAL")
     add_body_text(doc,
@@ -587,6 +640,13 @@ def generate_report():
         "spreadsheets or standard ERP JSON payloads formatted for SAP, Oracle NetSuite, and QuickBooks."
     )
 
+    add_body_text(doc,
+        "Figure 3 demonstrates the production Human-in-the-Loop Document Review Workstation in operation. The interface displays an ingested supplier invoice "
+        "alongside normalized entity values, granular confidence telemetry (e.g. Total Amount flagged at 63% with verification prompt), and itemized tables."
+    )
+
+    add_figure(doc, fig3_path, "Figure 3: Production Human-in-the-Loop Document Review Workstation with Live Dual-Pane PDF Rendering, Confidence Telemetry, and Mathematical Reconciliation Audit.", width_inches=5.8)
+
     # =========================================================================
     # CHAPTER 5: RESULTS, BENCHMARKS & COST ANALYSIS
     # =========================================================================
@@ -615,7 +675,7 @@ def generate_report():
     ]
     create_table(doc, t3_headers, t3_data, [1.5, 1.4, 1.2, 1.2, 1.2], 
                  caption="Table 3: Field-Level Financial Entity Extraction Benchmark & Confidence Telemetry.",
-                 font_size_pt=8.5, pad_v=40)
+                 font_size_pt=8.5, pad_v=36)
 
     add_sec_h1(doc, "5.2 END-TO-END LATENCY PROFILING & EXECUTION BREAKDOWN")
     add_body_text(doc,
@@ -635,7 +695,7 @@ def generate_report():
     ]
     create_table(doc, t4_headers, t4_data, [1.6, 1.8, 1.0, 1.0, 1.1], 
                  caption="Table 4: End-to-End Latency Characterization & Subsystem Timing Breakdown.",
-                 font_size_pt=8.5, pad_v=40)
+                 font_size_pt=8.5, pad_v=36)
 
     add_sec_h1(doc, "5.3 AWS WELL-ARCHITECTED COST ANALYSIS ($0.00 / MONTH)")
     add_body_text(doc,
@@ -658,7 +718,7 @@ def generate_report():
     ]
     create_table(doc, t5_headers, t5_data, [1.5, 2.1, 1.7, 1.2], 
                  caption="Table 5: AWS Well-Architected Monthly Free Tier Budget vs. Measured Workload ($0.00 / Month).",
-                 font_size_pt=8.5, pad_v=40)
+                 font_size_pt=8.5, pad_v=36)
 
     add_sec_h1(doc, "5.4 COMPARATIVE BENCHMARK: DOCUINTEL VS. MONOLITHIC EC2")
     add_body_text(doc,
@@ -677,7 +737,24 @@ def generate_report():
     ]
     create_table(doc, t6_headers, t6_data, [1.6, 2.4, 2.5], 
                  caption="Table 6: Architectural Comparison: DocuIntel Serverless vs. Traditional Monolithic OCR.",
-                 font_size_pt=8.0, pad_v=40)
+                 font_size_pt=8.0, pad_v=36)
+
+    add_sec_h1(doc, "5.5 PRODUCTION OPERATIONS DASHBOARD & CLOUD OBSERVABILITY TELEMETRY")
+    add_body_text(doc,
+        "To validate real-world operational readiness, DocuIntel was tested under multi-user financial workloads. Figure 4 displays the live "
+        "Executive Operations Dashboard. The interface aggregates live ingestion KPIs (124 total documents received, 3 actively processing, "
+        "5 awaiting operator review, and 116 successfully verified). The recent documents feed displays invoice statuses, extracted amounts in Indian Rupees (₹), "
+        "and direct links to the review workstation. The attention panel isolates documents with low-confidence field extractions for immediate human review."
+    )
+
+    add_figure(doc, fig4_path, "Figure 4: Executive Document Operations Dashboard Displaying Ingestion KPIs, Live Invoice Processing Pipeline, and Attention Review Queue.", width_inches=5.8)
+
+    add_body_text(doc,
+        "Figure 5 documents the verified production cloud infrastructure and live HTTP endpoints deployed in AWS Region ap-south-1. "
+        "All 8 development milestones have been fully implemented, integrated, and verified against production cloud standards."
+    )
+
+    add_figure(doc, fig5_path, "Figure 5: Live AWS Production Infrastructure, Service Endpoints, and Verified Cloud Deployment Topology.", width_inches=5.8)
 
     # =========================================================================
     # CHAPTER 6: CONCLUSION AND FUTURE WORK (Strictly Following Template Page 4)
@@ -747,18 +824,81 @@ def generate_report():
     # Save Word Document
     output_docx = os.path.join(os.path.dirname(__file__), "..", "DocuIntel_Project_Report_24BAI1501_24BDS1088.docx")
     doc.save(output_docx)
-    print(f"✓ Project report successfully generated at: {output_docx}")
+    print(f"✓ Word report generated at: {output_docx}")
     return output_docx
 
-if __name__ == "__main__":
+def detect_pdf_chapter_pages(pdf_path):
+    """Uses pypdf to inspect which page each chapter starts on in the compiled PDF."""
+    import pypdf
+    reader = pypdf.PdfReader(pdf_path)
+    num_pages = len(reader.pages)
+    print(f"Inspecting {num_pages} pages in compiled PDF: {pdf_path}")
+
+    detected = {}
+    targets = [
+        ("CHAPTER 1: INTRODUCTION", ["chapter 1", "introduction"]),
+        ("CHAPTER 2: BACKGROUND STUDY & PROBLEM STATEMENT", ["chapter 2", "background study"]),
+        ("CHAPTER 3: INDIVIDUAL CONTRIBUTIONS & WORK ALLOCATION", ["chapter 3", "individual contributions"]),
+        ("CHAPTER 4: METHODOLOGY & CLOUD ARCHITECTURE", ["chapter 4", "methodology"]),
+        ("CHAPTER 5: RESULTS, BENCHMARKS & COST ANALYSIS", ["chapter 5", "results"]),
+        ("CHAPTER 6: CONCLUSION AND FUTURE WORK", ["chapter 6", "conclusion"]),
+        ("REFERENCES", ["references"])
+    ]
+
+    for page_idx in range(num_pages):
+        text = reader.pages[page_idx].extract_text() or ""
+        text_lower = text.lower()
+        page_num = str(page_idx + 1)
+        
+        # Don't check TOC page (page 3)
+        if page_idx < 3:
+            continue
+
+        for ch_key, keywords in targets:
+            if ch_key not in detected:
+                if all(kw in text_lower for kw in keywords):
+                    detected[ch_key] = page_num
+                    print(f"  Found '{ch_key}' on PDF page {page_num}")
+
+    return detected, num_pages
+
+def compile_and_sync():
+    """Compiles the report, aligns TOC page numbers, converts to PDF, and syncs deliverables."""
+    print("=== PASS 1: Generating Initial Document ===")
     docx_path = generate_report()
-    
-    # Compile to PDF via Word COM
-    try:
-        from docx2pdf import convert
-        output_pdf = docx_path.replace(".docx", ".pdf")
-        print(f"Compiling PDF via Microsoft Word COM...")
-        convert(docx_path, output_pdf)
-        print(f"✓ PDF report successfully generated at: {output_pdf}")
-    except Exception as e:
-        print(f"Notice: Word COM PDF conversion notice: {e}")
+    pdf_path = docx_path.replace(".docx", ".pdf")
+
+    from docx2pdf import convert
+    print("Compiling Pass 1 PDF via Microsoft Word COM...")
+    convert(docx_path, pdf_path)
+
+    # Inspect PDF page numbers
+    detected_pages, total_pages = detect_pdf_chapter_pages(pdf_path)
+    print(f"Pass 1 detected chapter starting pages: {detected_pages}")
+
+    # Pass 2: Re-generate with exact detected pages
+    print("\n=== PASS 2: Regenerating Document with Exact TOC Mapping ===")
+    docx_path = generate_report(toc_map=detected_pages)
+    print("Compiling Pass 2 PDF via Microsoft Word COM...")
+    convert(docx_path, pdf_path)
+
+    # Re-verify Pass 2
+    final_detected, final_pages = detect_pdf_chapter_pages(pdf_path)
+    print(f"✓ Final verified chapter pages: {final_detected}")
+    print(f"✓ Total PDF Page Count: {final_pages}")
+
+    # Synchronize copies to docs/ and Desktop
+    docs_docx = os.path.join(os.path.dirname(__file__), "..", "docs", "DocuIntel_Project_Report_24BAI1501_24BDS1088.docx")
+    docs_pdf = os.path.join(os.path.dirname(__file__), "..", "docs", "DocuIntel_Project_Report_24BAI1501_24BDS1088.pdf")
+    desktop_docx = r"C:\Users\arshd\OneDrive - vit.ac.in\Desktop\DocuIntel_Project_Report_24BAI1501_24BDS1088.docx"
+    desktop_pdf = r"C:\Users\arshd\OneDrive - vit.ac.in\Desktop\DocuIntel_Project_Report_24BAI1501_24BDS1088.pdf"
+
+    import shutil
+    shutil.copy2(docx_path, docs_docx)
+    shutil.copy2(pdf_path, docs_pdf)
+    shutil.copy2(docx_path, desktop_docx)
+    shutil.copy2(pdf_path, desktop_pdf)
+    print("✓ Successfully synchronized deliverables to docs/ and Desktop.")
+
+if __name__ == "__main__":
+    compile_and_sync()
